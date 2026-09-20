@@ -18,19 +18,24 @@
   },
   "typingIndicator": {
     "enable": true,
-    "duration": 2000
+    "duration": 3000
+  },
+  "humanDelay": {
+    "enable": true,
+    "min": 800,
+    "max": 2500
   },
   "reactionMirror": {
     "enable": true
   },
   "adminBot": [
-    "61593683823942"
+    "100094063186003"
   ],
   "devUsers": [
-    "61593683823942"
+    "100094063186003"
   ],
   "premiumUsers": [
-    "61593683823942"
+    "100094063186003"
   ],
   "reactBy": {
     "delete": [
