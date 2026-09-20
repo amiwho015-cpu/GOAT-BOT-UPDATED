@@ -17,7 +17,7 @@ module.exports = {
 
     const ownerName = "Negative Xalman";
     const ownerAge = "18";
-    const fbName = "Maybe NX";
+    const fbName = "Maybe SHIHAB";
     const messenger = "https://www.facebook.com/xalman.dev";
     const whatsapp = "https://wa.me/qr/2SDY4QQTMJR7H1";
     const telegram = "@Negativexalman";
