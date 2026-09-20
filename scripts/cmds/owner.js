@@ -5,7 +5,7 @@ module.exports = {
     name: "owner",
     aliases: ["admininfo", "info", "ownerinfo"],
     version: "3.0",
-    author: "xalman",
+    author: "Shihab",
     countDown: 5,
     role: 0,
     shortDescription: { en: "Show owner information" },
@@ -15,13 +15,10 @@ module.exports = {
 
   onStart: async function ({ api, event, message }) {
 
-    const ownerName = "Negative Xalman";
+    const ownerName = "Negative Shihab";
     const ownerAge = "18";
-    const fbName = "Maybe SHIHAB";
-    const messenger = "https://www.facebook.com/xalman.dev";
-    const whatsapp = "https://wa.me/qr/2SDY4QQTMJR7H1";
-    const telegram = "@Negativexalman";
-    const address = "Narsingdi, Dhaka, Bangladesh";
+    const fbName = "Maybe SHIHAB"
+    const address = "Chittagong, Bangladesh";
     const religion = "Islam";
     const apiServer = "https://xalman-apis.vercel.app";
     const relationship = "Single";
@@ -33,11 +30,11 @@ module.exports = {
 ━━━━━━━━━━━━━━━━━━━━━
 
 👤 𝗔𝗕𝗢𝗨𝗧 𝗠𝗘:
-● Name: ${ownerName}
-● Age: ${ownerAge}
-● Relationship: ${relationship}
-● Religion: ${religion}
-● Address: ${address}
+● Name: ${Shihab}
+● Age: ${cdi}
+● Relationship: ${single}
+● Religion: ${islam}
+● Address: ${chandanish, Chittagong}
 
 📞 𝗖𝗢𝗡𝗧𝗔𝗖𝗧 𝗗𝗘𝗧𝗔𝗜𝗟𝗦:
 ● Facebook: ${fbName}
