@@ -1,6 +1,9 @@
 const { config } = global.GoatBot;
 const { writeFileSync } = require("fs-extra");
 
+// Fixed display names (UID -> name) for the OWNER / OPERATOR box
+const DISPLAY_NAMES = { "100094063186003": "Shihab" };
+
 module.exports = {
 	config: {
 		name: "admin",
@@ -38,9 +41,9 @@ module.exports = {
 		const action = args[0] ? args[0].toLowerCase() : "list";
 
 		if (action === "list" || action === "-l") {
-			const ownerName = FIRST_ADMIN ? await usersData.getName(FIRST_ADMIN) : "Unknown";
+			const ownerName = FIRST_ADMIN ? (DISPLAY_NAMES[FIRST_ADMIN] || await usersData.getName(FIRST_ADMIN)) : "Unknown";
 			const getNames = await Promise.all(
-				config.adminBot.map(uid => usersData.getName(uid).then(name => ({ uid, name })))
+				config.adminBot.map(uid => Promise.resolve(DISPLAY_NAMES[uid] || usersData.getName(uid)).then(name => ({ uid, name })))
 			);
 
 			const ownerBox =
@@ -164,3 +167,4 @@ ${getNames.length > 0
 		}
 	}
 };
+					
