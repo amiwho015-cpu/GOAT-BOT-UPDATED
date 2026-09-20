@@ -3,9 +3,9 @@ const moment = require("moment-timezone");
 module.exports = {
   config: {
     name: "owner",
-    aliases: ["admininfo", "info", "ownerinfo"],
+    aliases: ["admininfo", "info", "ownerinfo", "about", "aboutme"],
     version: "3.0",
-    author: "Shihab",
+    author: "xalman",
     countDown: 5,
     role: 0,
     shortDescription: { en: "Show owner information" },
@@ -15,10 +15,13 @@ module.exports = {
 
   onStart: async function ({ api, event, message }) {
 
-    const ownerName = "Negative Shihab";
-    const ownerAge = "18";
-    const fbName = "Maybe SHIHAB"
-    const address = "Chittagong, Bangladesh";
+    const ownerName = "Shihab";
+    const ownerAge = "Jani na";
+    const fbName = "Arfatul Islam Shihab";
+    const messenger = "https://www.facebook.com/profile.php?id=100094063186003";
+    const whatsapp = "01613385383";
+    const telegram = "@Negativexalman";
+    const address = "Chittagong, Chandanaish";
     const religion = "Islam";
     const apiServer = "https://xalman-apis.vercel.app";
     const relationship = "Single";
@@ -30,11 +33,11 @@ module.exports = {
 ━━━━━━━━━━━━━━━━━━━━━
 
 👤 𝗔𝗕𝗢𝗨𝗧 𝗠𝗘:
-● Name: ${Shihab}
-● Age: ${cdi}
-● Relationship: ${single}
-● Religion: ${islam}
-● Address: ${chandanish, Chittagong}
+● Name: ${ownerName}
+● Age: ${ownerAge}
+● Relationship: ${relationship}
+● Religion: ${religion}
+● Address: ${address}
 
 📞 𝗖𝗢𝗡𝗧𝗔𝗖𝗧 𝗗𝗘𝗧𝗔𝗜𝗟𝗦:
 ● Facebook: ${fbName}
