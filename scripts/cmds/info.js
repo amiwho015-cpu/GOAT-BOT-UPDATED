@@ -15,7 +15,7 @@ module.exports = {
   },
 
   onStart: async function ({ message }) {
-    const authorName = "ST | Sheikh Tamim";
+    const authorName = "CRX Shihab";
     const ownAge = "⫷ 21 Years Old ⫸";
     const messenger = "m.me/sheikhtamimlover";
     const authorFB = "https://facebook.com/sheikhtamimlover";
@@ -23,7 +23,7 @@ module.exports = {
     const Status = "⫷ 💫 Keep Calm & Code On 💫 ⫸";
 
     const urls = [
-      "https://i.ibb.co.com/B52s0L6G/2a3b08a991cb.jpg"
+      "https://i.ibb.co/9mQ9g9TK/file-00000000da1c8211ac4f028433d718e7.png"
     ];
     const link = urls[Math.floor(Math.random() * urls.length)];
 
