@@ -55,11 +55,11 @@ module.exports = {
 ⭓ 🌐 𝗙𝗮𝗰𝗲𝗯𝗼𝗼𝗸    : 『 ${authorFB} 』
 
 ╔═《🌍 𝗦𝗢𝗖𝗜𝗔𝗟𝗦》═╗
-• 📺 YouTube    : ❝ @sheikhtamimlover ❞
-• ✈️ Telegram  : @sheikh_tamim
-• 📷 Instagram : @sheikh.tamim_lover
-• 🧿 CapCut    : ❝ @sheikhtamim ❞
-• 🎵 TikTok     : ❝ @sheikhtamimlover ❞
+• 📺 YouTube    : ❝ nai ❞
+• ✈️ Telegram  : nai
+• 📷 Instagram : hide
+• 🧿 CapCut    : ❝ hide ❞
+• 🎵 TikTok     : ❝ nai ❞
 ╚════════════════════╝`,
 
       attachment: await global.utils.getStreamFromURL(link)
