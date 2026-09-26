@@ -15,12 +15,12 @@ module.exports = {
     this.sentThreads.set(threadID, true);
     
     const ownerInfo = {
-      name: "𝐌𝐨𝐡𝐚𝐦𝐦𝐚𝐝 𝐀𝐳𝐚𝐝",
-      age: "𝟏𝟖",
+      name: "CRX Shihab",
+      age: "18+",
       from: "𝐁𝐚𝐧𝐠𝐥𝐚𝐝𝐞𝐬𝐡 🇧🇩",
       address: "𝐂𝐡𝐢𝐭𝐭𝐚𝐠𝐨𝐧𝐠",
       work: "𝐒𝐭𝐮𝐝𝐞𝐧𝐭",
-      class: "𝟓",
+      class: "Guess",
       religion: "𝐈𝐬𝐥𝐚𝐦",
       role: "𝐁𝐨𝐭 𝐎𝐰𝐧𝐞𝐫",
       kalema: "لَا إِلٰهَ إِلَّا اللهُ مُحَمَّدٌ رَسُوْلُ اللهِ"
