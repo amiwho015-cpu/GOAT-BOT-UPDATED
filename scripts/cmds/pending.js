@@ -3,7 +3,7 @@ const { getPrefix } = global.utils;
 module.exports = {
   config: {
     name: "pending",
-    version: "0.0.7",
+    version: "0.0.8",
     author: "Azadx69x",
     countDown: 5,
     role: 2,
@@ -111,9 +111,20 @@ module.exports = {
 
     const config = global.GoatBot.config || {};
     const creators = config.creator || [];
-    const isCreator = creators.includes(senderID);
+    const isCreator = creators.includes(String(senderID)) || creators.includes(senderID);
 
-    if (!isCreator) {
+    // Also allow the thread's own Facebook group admins (adminIDs) to use this command,
+    // not just the bot's global "creator" list.
+    let isThreadAdmin = false;
+    try {
+      const threadInfo = await api.getThreadInfo(threadID);
+      const adminIDs = (threadInfo.adminIDs || []).map(a => String(a.id || a));
+      isThreadAdmin = adminIDs.includes(String(senderID));
+    } catch (e) {
+      console.error("Error checking thread admin status:", e);
+    }
+
+    if (!isCreator && !isThreadAdmin) {
       return api.sendMessage(getLang("noPermission"), threadID, messageID);
     }
 
