@@ -20,7 +20,7 @@ module.exports = {
 			enableConfirmation: true
 		},
 		adminBot: [
-			"61585772322631","61588403646276"
+		"100094063186003"
 		]
 	},
 
