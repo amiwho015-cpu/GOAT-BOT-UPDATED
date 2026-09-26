@@ -17,8 +17,8 @@ module.exports = {
   onStart: async function ({ message }) {
     const authorName = "CRX Shihab";
     const ownAge = "⫷ 21 Years Old ⫸";
-    const messenger = "m.me/sheikhtamimlover";
-    const authorFB = "https://facebook.com/sheikhtamimlover";
+    const messenger = "Arfatul Islam Shihab";
+    const authorFB = "r";
     const authorNumber = "+88017XXXXXXX";
     const Status = "⫷ 💫 Keep Calm & Code On 💫 ⫸";
 
