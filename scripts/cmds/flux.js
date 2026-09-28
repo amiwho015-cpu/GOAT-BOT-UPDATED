@@ -1,95 +1,100 @@
-const axios = require("axios");
-const fs = require("fs");
-const path = require("path");
+const axios = require('axios');
 
-const baseApiUrl = async () => {
-        const base = await axios.get("https://raw.githubusercontent.com/mahmudx7/HINATA/main/baseApiUrl.json");
-        return base.data.mahmud;
-};
+const API_CONFIG_URL = "https://raw.githubusercontent.com/goatbotnx/xalmanx210/refs/heads/main/apis.json";
+const API_KEY = "xalman-hub";
+let apiBaseUrl = null;
+let apiConfigRequest = null;
+
+async function getApiBaseUrl() {
+  if (apiBaseUrl) return apiBaseUrl;
+
+  if (!apiConfigRequest) {
+    apiConfigRequest = axios
+      .get(API_CONFIG_URL, { timeout: 15000 })
+      .then(({ data }) => {
+        const baseUrl = data?.[API_KEY];
+
+        if (typeof baseUrl !== "string" || !baseUrl.trim()) {
+          throw new Error(`Missing API key in apis.json: ${API_KEY}`);
+        }
+
+        apiBaseUrl = baseUrl.replace(/\/+$/, "");
+        return apiBaseUrl;
+      })
+      .finally(() => {
+        apiConfigRequest = null;
+      });
+  }
+
+  return apiConfigRequest;
+}
+const fs = require('fs-extra');
+const path = require('path');
 
 module.exports = {
-        config: {
-                name: "flux",
-                version: "1.7",
-                author: "MahMUD",
-                countDown: 15,
-                role: 0,
-                description: {
-                        bn: "ফ্লাক্স প্রো মডেল দিয়ে উন্নত এআই ছবি তৈরি করুন",
-                        en: "Generate high-quality AI images using Flux Pro model",
-                        vi: "Tạo hình ảnh AI chất lượng cao bằng mô hình Flux Pro"
-                },
-                category: "image gen",
-                guide: {
-                        bn: '   {pn} <prompt> --ratio <value>: ছবি তৈরি করতে বর্ণনা ও রেশিও দিন',
-                        en: '   {pn} <prompt> --ratio <value>: Provide description and ratio',
-                        vi: '   {pn} <prompt> --ratio <value>: Cung cấp mô tả và tỷ lệ'
-                }
-        },
+    config: {
+        name: "flux",
+        version: "3.2.0",
+        author: "Shihab",
+        countDown: 8,
+        role: 0,
+        shortDescription: "Generate High-Quality AI Images",
+        longDescription: "Generate stunning images using Flux.1-schnell model.",
+        category: "AI",
+        guide: "{pn} [your prompt]"
+    },
 
-        langs: {
-                bn: {
-                        noPrompt: "× বেবি, ছবি তৈরি করার জন্য কিছু তো লেখো!",
-                        wait: "✅ প্রো ছবি তৈরি হচ্ছে, একটু অপেক্ষা করো বেবি...!! <😘",
-                        success: "𝐇𝐞𝐫𝐞'𝐬 𝐲𝐨𝐮𝐫 𝐟𝐥𝐮𝐱 𝐩𝐫𝐨 𝐢𝐦𝐚𝐠𝐞 𝐛𝐚𝐛𝐲 <😘",
-                        error: "× সমস্যা হয়েছে: %1। প্রয়োজনে Contact MahMUD।"
-                },
-                en: {
-                        noPrompt: "× Baby, please provide a prompt to generate image!",
-                        wait: "🔄 | Generating your image, please wait...",
-                        success: "𝐇𝐞𝐫𝐞'𝐬 𝐲𝐨𝐮𝐫 𝐟𝐥𝐮𝐱 𝐩𝐫𝐨 𝐢𝐦𝐚𝐠 e 𝐛𝐚𝐛𝐲 <😘",
-                        error: "× API error: %1. Contact MahMUD for help."
-                },
-                vi: {
-                        noPrompt: "× Cưng ơi, vui lòng nhập mô tả để tạo ảnh!",
-                        wait: "✅ Đang tạo ảnh Pro, vui lòng chờ chút...!! <😘",
-                        success: "Ảnh Flux Pro của cưng đây <😘",
-                        error: "× Lỗi: %1. Liên hệ MahMUD để hỗ trợ."
-                }
-        },
+    onStart: async function ({ api, event, args }) {
+        const { threadID, messageID, senderID } = event;
+        const prompt = args.join(" ");
 
-        onStart: async function ({ api, event, args, message, getLang }) {
-                const authorName = String.fromCharCode(77, 97, 104, 77, 85, 68);
-                if (this.config.author !== authorName) {
-                        return api.sendMessage("You are not authorized to change the author name.", event.threadID, event.messageID);
-                }
-
-                const fullArgs = args.join(" ");
-                if (!fullArgs) return message.reply(getLang("noPrompt"));
-
-                const [prompt, ratio = "1:1"] = fullArgs.includes("--ratio") 
-                        ? fullArgs.split("--ratio").map(s => s.trim()) 
-                        : [fullArgs, "1:1"];
-
-                const cacheDir = path.join(__dirname, "cache");
-                const filePath = path.join(cacheDir, `fluxpro_${Date.now()}.png`);
-                if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir);
-
-                try {
-                        api.setMessageReaction("⏳", event.messageID, () => {}, true);
-                        const waitMsg = await message.reply(getLang("wait"));
-
-                        const baseUrl = await baseApiUrl();
-                        const url = `${baseUrl}/api/fluxpro?prompt=${encodeURIComponent(prompt)}&ratio=${ratio}`;
-
-                        const response = await axios.get(url, { responseType: "arraybuffer", timeout: 120000 });
-                        fs.writeFileSync(filePath, Buffer.from(response.data));
-
-                        if (waitMsg?.messageID) api.unsendMessage(waitMsg.messageID);
-                        api.setMessageReaction("✅", event.messageID, () => {}, true);
-
-                        return message.reply({
-                                body: getLang("success"),
-                                attachment: fs.createReadStream(filePath)
-                        }, () => {
-                                if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-                        });
-
-                } catch (err) {
-                        console.error("Flux Pro Error:", err);
-                        api.setMessageReaction("❌", event.messageID, () => {}, true);
-                        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-                        return message.reply(getLang("error", err.message));
-                }
+        if (!prompt) {
+            return api.sendMessage("✨ Please enter a prompt!\n━━━━━━━━━━━━━━━━━━━━\nExample: /flux a futuristic city", threadID, messageID);
         }
+
+        api.setMessageReaction("⏳", messageID, (err) => {}, true);
+        const startTime = Date.now();
+
+        const apiUrl = `${await getApiBaseUrl()}/api/flux-schnell?prompt=${encodeURIComponent(prompt)}`;
+        const cachePath = path.join(__dirname, 'cache', `flux_${senderID}_${Date.now()}.png`);
+
+        try {
+            if (!fs.existsSync(path.join(__dirname, 'cache'))) {
+                fs.mkdirSync(path.join(__dirname, 'cache'), { recursive: true });
+            }
+
+            const response = await axios({
+                method: 'get',
+                url: apiUrl,
+                responseType: 'arraybuffer',
+                timeout: 60000 
+            });
+
+            const contentType = response.headers['content-type'];
+            if (!contentType || !contentType.includes('image')) {
+                throw new Error("Invalid Image Data");
+            }
+
+            fs.writeFileSync(cachePath, Buffer.from(response.data, 'binary'));
+
+            const endTime = Date.now();
+            const timeTaken = ((endTime - startTime) / 1000).toFixed(2);
+
+            const msgBody = `✨ 𝗙𝗟𝗨𝗫 𝗔𝗜 𝗚𝗘𝗡𝗘𝗥𝗔𝗧𝗘𝗗 ✨\n━━━━━━━━━━━━━━━━━━━━\n📝 Prompt: ${prompt}\n👤 Author: xalman\n⏱️ Time Taken: ${timeTaken}s\n━━━━━━━━━━━━━━━━━━━━`;
+
+            api.setMessageReaction("✅", messageID, (err) => {}, true);
+
+            return api.sendMessage({
+                body: msgBody,
+                attachment: fs.createReadStream(cachePath)
+            }, threadID, () => {
+                if (fs.existsSync(cachePath)) fs.unlinkSync(cachePath);
+            }, messageID);
+
+        } catch (error) {
+            console.error(error);
+            api.setMessageReaction("❌", messageID, (err) => {}, true);
+            return api.sendMessage(`⚠️ Generation Failed! ${error.message}`, threadID, messageID);
+        }
+    }
 };

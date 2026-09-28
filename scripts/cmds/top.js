@@ -1,470 +1,1465 @@
-const fs = require("fs");
+const { createCanvas, loadImage } = require("canvas");
+const fs = require("fs-extra");
 const path = require("path");
-const moment = require("../../logger/date-time.js");
-const { createCanvas, loadImage, registerFont } = require("canvas");
 const axios = require("axios");
-const { drawTextWithEmoji } = require("../utils/emojiCanvas");
 
-try {
-    const fontDir = path.join(__dirname, 'assets', 'font');
-    registerFont(path.join(fontDir, 'NotoSans-Bold.ttf'), { family: 'Poppins', weight: 'bold' });
-    registerFont(path.join(fontDir, 'NotoSans-Regular.ttf'), { family: 'Poppins', weight: 'normal' });
-    registerFont(path.join(fontDir, 'NotoSans-Bold.ttf'), { family: 'Orbitron', weight: 'bold' });
-    registerFont(path.join(fontDir, 'NotoSans-Bold.ttf'), { family: 'NotoSans', weight: 'bold' });
-    registerFont(path.join(fontDir, 'NotoSans-Regular.ttf'), { family: 'NotoSans', weight: 'normal' });
-} catch (e) {
-    console.log('[top.js] Font registration error:', e.message);
-}
+const LIVE_SESSIONS = new Map();
 
-function formatMoney(value) {
-    value = Number(value);
-    if (isNaN(value)) return "0";
-    if (value >= 1e15) return (value / 1e15).toFixed(2) + "Q";
-    if (value >= 1e12) return (value / 1e12).toFixed(2) + "T";
-    if (value >= 1e9) return (value / 1e9).toFixed(2) + "B";
-    if (value >= 1e6) return (value / 1e6).toFixed(2) + "M";
-    if (value >= 1e3) return (value / 1e3).toFixed(2) + "K";
-    return value.toString();
-}
-
-const avatarCache = new Map();
-async function fetchAvatar(userID, usersData) {
-    if (avatarCache.has(userID)) return avatarCache.get(userID);
-
-    try {
-        let avatarURL = await usersData.getAvatarUrl(userID);
-        if (!avatarURL) {
-            const token = process.env.FACEBOOK_GRAPH_ACCESS_TOKEN;
-            if (token) avatarURL = `https://graph.facebook.com/${userID}/picture?type=large&width=2048&height=2048&access_token=${encodeURIComponent(token)}`;
-        }
-        const res = await axios.get(avatarURL, { 
-            responseType: "arraybuffer", 
-            timeout: 5000,
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-            }
-        });
-        const image = await loadImage(Buffer.from(res.data));
-        avatarCache.set(userID, image);
-        return image;
-    } catch (e) {
-        const canvas = createCanvas(200, 200);
-        const ctx = canvas.getContext("2d");
-        
-        const hue = userID ? userID.split('').reduce((a,b)=>a+b.charCodeAt(0),0) % 360 : 200;
-        const gradient = ctx.createLinearGradient(0, 0, 200, 200);
-        gradient.addColorStop(0, `hsl(${hue}, 80%, 60%)`);
-        gradient.addColorStop(1, `hsl(${hue + 40}, 80%, 40%)`);
-        ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, 200, 200);
-        
-        ctx.fillStyle = "rgba(255,255,255,0.1)";
-        ctx.fillRect(0, 0, 200, 100);
-        
-        ctx.shadowColor = "rgba(0,0,0,0.5)";
-        ctx.shadowBlur = 10;
-        ctx.fillStyle = "#fff";
-        ctx.font = "bold 90px 'Poppins', Arial";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        const firstLetter = userID ? userID[0] : "U";
-        ctx.fillText(firstLetter.toUpperCase(), 100, 100);
-        
-        avatarCache.set(userID, canvas);
-        return canvas;
-    }
-}
-
-function roundRect(ctx, x, y, width, height, radius) {
-    ctx.beginPath();
-    ctx.moveTo(x + radius, y);
-    ctx.lineTo(x + width - radius, y);
-    ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
-    ctx.lineTo(x + width, y + height - radius);
-    ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
-    ctx.lineTo(x + radius, y + height);
-    ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
-    ctx.lineTo(x, y + radius);
-    ctx.quadraticCurveTo(x, y, x + radius, y);
-    ctx.closePath();
-}
-
-async function drawTopBoard(users, usersData) {
-    const W = 1200, H = 1600;
-    const canvas = createCanvas(W, H);
-    const ctx = canvas.getContext("2d");
-
-    try {
-        const bg = ctx.createLinearGradient(0, 0, W, H);
-        bg.addColorStop(0, "#0a0a0f");
-        bg.addColorStop(0.3, "#1a1a2e");
-        bg.addColorStop(0.7, "#16213e");
-        bg.addColorStop(1, "#0f0f1a");
-        ctx.fillStyle = bg;
-        ctx.fillRect(0, 0, W, H);
-
-        // Animated-style particles with glow - reduced count
-        for (let i = 0; i < 150; i++) {
-            const x = Math.random() * W;
-            const y = Math.random() * H;
-            const size = Math.random() * 3;
-            const opacity = Math.random() * 0.5;
-            const hue = Math.random() > 0.5 ? 200 : 280;
-            
-            ctx.shadowColor = `hsla(${hue}, 100%, 70%, ${opacity})`;
-            ctx.shadowBlur = 10;
-            ctx.fillStyle = `hsla(${hue}, 100%, 80%, ${opacity})`;
-            ctx.beginPath();
-            ctx.arc(x, y, size, 0, Math.PI*2);
-            ctx.fill();
-        }
-        ctx.shadowBlur = 0;
-
-        // Top decorative line with glow
-        const lineGrad = ctx.createLinearGradient(0, 0, W, 0);
-        lineGrad.addColorStop(0, "transparent");
-        lineGrad.addColorStop(0.2, "#00d4ff");
-        lineGrad.addColorStop(0.5, "#ff00ff");
-        lineGrad.addColorStop(0.8, "#00d4ff");
-        lineGrad.addColorStop(1, "transparent");
-        
-        ctx.shadowColor = "#00d4ff";
-        ctx.shadowBlur = 20;
-        ctx.strokeStyle = lineGrad;
-        ctx.lineWidth = 4;
-        ctx.beginPath();
-        ctx.moveTo(100, 100);
-        ctx.lineTo(W - 100, 100);
-        ctx.stroke();
-        ctx.shadowBlur = 0;
-
-        // Title - smaller and higher
-        ctx.save();
-        ctx.shadowColor = "#ff00ff";
-        ctx.shadowBlur = 30;
-        ctx.font = "bold 60px 'Orbitron', 'Arial', sans-serif";
-        ctx.fillStyle = "#ffffff";
-        ctx.textAlign = "center";
-        ctx.fillText("TOP 15 RICHEST USERS", W/2, 65);
-        
-        ctx.shadowColor = "#00d4ff";
-        ctx.shadowBlur = 60;
-        ctx.fillStyle = "rgba(255,255,255,0.3)";
-        ctx.fillText("TOP 15 RICHEST USERS", W/2, 65);
-        ctx.restore();
-
-        // Subtitle - smaller
-        ctx.font = "italic 24px 'Poppins', Arial";
-        ctx.fillStyle = "rgba(255,255,255,0.6)";
-        ctx.fillText("Elite Billionaires Club", W/2, 95);
-
-        // Top 3 positions - COMPACT
-        const positions = [
-            { x: W/2 - 80, y: 130, size: 160, color: "#ffd700", glow: "#ffaa00", rank: 1 },   // Center - smaller
-            { x: W/2 - 350, y: 200, size: 130, color: "#c0c0c0", glow: "#a0a0a0", rank: 2 },  // Left - smaller
-            { x: W/2 + 200, y: 200, size: 130, color: "#cd7f32", glow: "#b87333", rank: 3 },  // Right - smaller
-        ];
-        
-        // Draw top 3 users
-        for (let i = 0; i < 3 && i < users.length; i++) {
-            try {
-                await drawTopThreeCompact(ctx, users[i], positions[i], usersData);
-            } catch (e) {
-                console.log(`Error drawing top player ${i}:`, e);
-            }
-        }
-
-        // Divider line - moved up
-        ctx.strokeStyle = "rgba(255,255,255,0.2)";
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(100, 420);
-        ctx.lineTo(W - 100, 420);
-        ctx.stroke();
-
-        // Compact cards for 4-15
-        const startY = 435;
-        const cardHeight = 60; // Reduced from 75
-        const gap = 8; // Reduced from 12
-        
-        for (let i = 3; i < users.length; i++) {
-            try {
-                const y = startY + (i-3) * (cardHeight + gap);
-                await drawCompactCard(ctx, users[i], i+1, y, usersData, W);
-            } catch (e) {
-                console.log(`Error drawing rank card ${i}:`, e);
-            }
-        }
-
-        // Bottom section - compact
-        const footerY = H - 80;
-        
-        // Gradient line
-        ctx.shadowColor = "#ff00ff";
-        ctx.shadowBlur = 15;
-        const footerGrad = ctx.createLinearGradient(200, 0, W-200, 0);
-        footerGrad.addColorStop(0, "transparent");
-        footerGrad.addColorStop(0.5, "rgba(0,212,255,0.8)");
-        footerGrad.addColorStop(1, "transparent");
-        ctx.strokeStyle = footerGrad;
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(200, footerY);
-        ctx.lineTo(W - 200, footerY);
-        ctx.stroke();
-        ctx.shadowBlur = 0;
-
-        // Stats - smaller
-        ctx.font = "bold 24px 'Poppins', Arial";
-        ctx.fillStyle = "#00d4ff";
-        ctx.textAlign = "center";
-        ctx.fillText(`Total Users: ${usersData.getAll ? (await usersData.getAll()).length : 'N/A'}`, W/2, footerY + 30);
-        
-        ctx.font = "18px 'Poppins', Arial";
-        ctx.fillStyle = "rgba(255,255,255,0.5)";
-        ctx.fillText(`${moment().tz("Asia/Dhaka").format("YYYY-MM-DD | hh:mm:ss A")}`, W/2, footerY + 55);
-
-        // Save with high quality
-        const cacheDir = path.join(__dirname, "cache");
-        if (!fs.existsSync(cacheDir)) {
-            fs.mkdirSync(cacheDir, { recursive: true });
-        }
-        
-        const fileName = `top_money_${Date.now()}.png`;
-        const filePath = path.join(cacheDir, fileName);
-        
-        const buffer = canvas.toBuffer("image/png", { compressionLevel: 3, filters: canvas.PNG_FILTER_NONE });
-        fs.writeFileSync(filePath, buffer);
-        
-        return filePath;
-
-    } catch (e) {
-        console.log("Error in drawTopBoard:", e);
-        throw e;
-    }
-}
-
-async function drawTopThreeCompact(ctx, user, pos, usersData) {
-    try {
-        const avatar = await fetchAvatar(user.userID, usersData);
-        const { x, y, size, color, glow, rank } = pos;
-        const centerX = x + size/2;
-        const centerY = y + size/2;
-
-        // Outer glow ring - thinner
-        ctx.shadowColor = glow;
-        ctx.shadowBlur = 30;
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, size/2 + 15, 0, Math.PI*2);
-        ctx.strokeStyle = color;
-        ctx.lineWidth = 4;
-        ctx.stroke();
-        
-        // Inner glow
-        ctx.shadowBlur = 10;
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, size/2 + 8, 0, Math.PI*2);
-        ctx.strokeStyle = "rgba(255,255,255,0.5)";
-        ctx.lineWidth = 2;
-        ctx.stroke();
-        ctx.shadowBlur = 0;
-
-        // Avatar with clip
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, size/2, 0, Math.PI*2);
-        ctx.clip();
-        
-        ctx.fillStyle = "#1a1a2e";
-        ctx.fillRect(x, y, size, size);
-        ctx.drawImage(avatar, x, y, size, size);
-        
-        // Glass overlay
-        const glassGrad = ctx.createLinearGradient(0, y + size*0.6, 0, y + size);
-        glassGrad.addColorStop(0, "transparent");
-        glassGrad.addColorStop(1, "rgba(0,0,0,0.4)");
-        ctx.fillStyle = glassGrad;
-        ctx.fillRect(x, y + size*0.6, size, size*0.4);
-        
-        ctx.restore();
-
-        // Rank text - smaller
-        ctx.font = "bold 26px 'Orbitron', Arial";
-        ctx.fillStyle = color;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.shadowColor = glow;
-        ctx.shadowBlur = 8;
-        ctx.fillText(`#${rank}`, centerX, y + size + 25);
-        ctx.shadowBlur = 0;
-
-        // Name - smaller
-        ctx.shadowColor = "rgba(255,255,255,0.5)";
-        ctx.shadowBlur = 8;
-        ctx.font = "bold 24px 'Poppins', Arial";
-        ctx.fillStyle = "#fff";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "alphabetic";
-        const displayName = user.name && user.name.length > 10 ? user.name.slice(0, 8) + ".." : (user.name || "Unknown");
-        await drawTextWithEmoji(ctx, displayName, centerX, y + size + 55);
-        ctx.shadowBlur = 0;
-
-        // Money - smaller
-        ctx.font = "bold 20px 'Poppins', Arial";
-        ctx.fillStyle = color;
-        ctx.fillText(`${formatMoney(user.money || 0)}`, centerX, y + size + 80);
-
-    } catch (e) {
-        console.log("Error in drawTopThreeCompact:", e);
-    }
-}
-
-// Compact card for 4-15
-async function drawCompactCard(ctx, user, rank, y, usersData, W) {
-    try {
-        const x = 60;
-        const w = W - 120;
-        const h = 60; // Reduced height
-        const avatar = await fetchAvatar(user.userID, usersData);
-        const avatarSize = 45; // Reduced from 55
-
-        // Subtle glass background
-        const glassGrad = ctx.createLinearGradient(x, y, x + w, y + h);
-        glassGrad.addColorStop(0, "rgba(255,255,255,0.05)");
-        glassGrad.addColorStop(0.5, "rgba(255,255,255,0.02)");
-        glassGrad.addColorStop(1, "rgba(255,255,255,0.05)");
-        
-        ctx.fillStyle = glassGrad;
-        roundRect(ctx, x, y, w, h, 12);
-        ctx.fill();
-        
-        // Single accent line on left - thinner
-        const rankColors = {
-            4: "#00d4ff", 5: "#00d4ff", 6: "#00d4ff",
-            7: "#ff6b6b", 8: "#ff6b6b", 9: "#ff6b6b",
-            10: "#ffd93d", 11: "#ffd93d", 12: "#ffd93d",
-            13: "#6bcf7f", 14: "#6bcf7f", 15: "#6bcf7f"
-        };
-        const accentColor = rankColors[rank] || "#00d4ff";
-        
-        ctx.fillStyle = accentColor;
-        ctx.fillRect(x, y + 8, 3, h - 16);
-
-        // Rank number - smaller
-        ctx.font = "bold 22px 'Orbitron', Arial";
-        ctx.fillStyle = accentColor;
-        ctx.textAlign = "left";
-        ctx.textBaseline = "middle";
-        ctx.fillText(`#${rank}`, x + 15, y + h/2);
-
-        // Avatar with subtle ring - smaller
-        const avatarX = x + 65;
-        const avatarY = y + 7;
-        
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(avatarX + avatarSize/2, avatarY + avatarSize/2, avatarSize/2, 0, Math.PI*2);
-        ctx.clip();
-        ctx.drawImage(avatar, avatarX, avatarY, avatarSize, avatarSize);
-        ctx.restore();
-        
-        // Avatar ring - thinner
-        ctx.beginPath();
-        ctx.arc(avatarX + avatarSize/2, avatarY + avatarSize/2, avatarSize/2 + 1, 0, Math.PI*2);
-        ctx.strokeStyle = accentColor;
-        ctx.lineWidth = 2;
-        ctx.stroke();
-
-        // Name - smaller
-        ctx.font = "bold 22px 'Poppins', Arial";
-        ctx.fillStyle = "#fff";
-        ctx.textAlign = "left";
-        ctx.textBaseline = "middle";
-        const displayName = user.name && user.name.length > 18 ? user.name.slice(0, 16) + ".." : (user.name || "Unknown");
-        await drawTextWithEmoji(ctx, displayName, x + 120, y + h/2);
-
-        // Money - smaller
-        ctx.font = "bold 20px 'Orbitron', Arial";
-        ctx.fillStyle = "#00ff88";
-        ctx.textAlign = "right";
-        ctx.textBaseline = "middle";
-        ctx.fillText(`${formatMoney(user.money || 0)}`, x + w - 20, y + h/2);
-
-    } catch (e) {
-        console.log("Error in drawCompactCard:", e);
-    }
-}
-
-// Module export
 module.exports = {
-    config: {
-        name: "top",
-        version: "0.0.7",
-        author: "Azadx69x",
-        countDown: 5,
-        role: 0,
-        shortDescription: "Top 15 Money Leaderboard",
-        longDescription: "Shows top 15 richest users",
-        category: "rank",
-        guide: "{pn} money"
+  config: {
+    name: "top",
+    version: "7.1",
+    author: "Shihab",
+    role: 0,
+    shortDescription: {
+      en: "Top Balance Leaderboard"
     },
-
-    onStart: async function({ api, event, usersData, message }) {
-        try {
-            // Set loading reaction
-            if (api && event) {
-                api.setMessageReaction("⚡", event.messageID, () => {}, true);
-            }
-
-            // Get all users
-            const allUsers = await usersData.getAll();
-            
-            if (!allUsers || allUsers.length === 0) {
-                return message.reply("No users found in database!");
-            }
-
-            // Sort by money and get top 15
-            const sorted = allUsers
-                .map(u => ({
-                    userID: u.userID,
-                    name: u.name || "Unknown User",
-                    money: u.money || 0
-                }))
-                .sort((a, b) => b.money - a.money)
-                .slice(0, 15);
-
-            // Generate compact image
-            const filePath = await drawTopBoard(sorted, usersData);
-
-            // Send message with attachment only
-            await message.reply({
-                attachment: fs.createReadStream(filePath)
-            });
-
-            // Success reaction
-            if (api && event) {
-                api.setMessageReaction("✓", event.messageID, () => {}, true);
-            }
-
-            // Cleanup after 10 seconds
-            setTimeout(() => {
-                try {
-                    if (fs.existsSync(filePath)) {
-                        fs.unlinkSync(filePath);
-                    }
-                } catch (e) {}
-            }, 10000);
-
-        } catch(err) {
-            console.error("Top command error:", err);
-            
-            if (api && event) {
-                try {
-                    api.setMessageReaction("✗", event.messageID, () => {}, true);
-                } catch (e) {}
-            }
-            
-            return message.reply("Error generating leaderboard. Please try again later.");
-        }
+    longDescription: {
+      en: "Show top richest users with real-time balance updating."
+    },
+    category: "RANK",
+    guide: {
+      en: "{pn}\n{pn} live\n{pn} stop"
     }
+  },
+
+  onStart: async function ({ api, event, usersData, message, args }) {
+    const { threadID, messageID } = event;
+    const mode = (args[0] || "").toLowerCase();
+
+    if (mode === "stop") {
+      const session = LIVE_SESSIONS.get(threadID);
+
+      if (!session) {
+        return message.reply("⚠️ No live leaderboard is running.");
+      }
+
+      clearInterval(session.interval);
+
+      try {
+        if (session.messageID) {
+          await api.unsendMessage(session.messageID);
+        }
+      } catch (e) {}
+
+      LIVE_SESSIONS.delete(threadID);
+
+      return message.reply("🛑 Live leaderboard stopped.");
+    }
+
+    if (mode === "live") {
+      if (LIVE_SESSIONS.has(threadID)) {
+        return message.reply("⚡ Live leaderboard is already running.");
+      }
+
+      api.setMessageReaction("⏳", messageID, () => {}, true);
+
+      try {
+        const result = await createLeaderboard(api, usersData);
+
+        const sent = await message.reply({
+          body:
+            "🏆 𝗟𝗜𝗩𝗘 𝗟𝗘𝗔𝗗𝗘𝗥𝗕𝗢𝗔𝗥𝗗\n" +
+            "⚡ Auto updating every 10 seconds",
+          attachment: fs.createReadStream(result.filePath)
+        });
+
+        cleanupFile(result.filePath);
+
+        api.setMessageReaction("✅", messageID, () => {}, true);
+
+        const session = {
+          messageID: sent.messageID,
+          interval: null,
+          updating: false
+        };
+
+        session.interval = setInterval(async () => {
+          if (session.updating) return;
+
+          session.updating = true;
+
+          try {
+            const latest = await createLeaderboard(api, usersData);
+
+            try {
+              await api.unsendMessage(session.messageID);
+            } catch (e) {}
+
+            const newMessage = await api.sendMessage(
+              {
+                body:
+                  "🏆 𝗟𝗜𝗩𝗘 𝗟𝗘𝗔𝗗𝗘𝗥𝗕𝗢𝗔𝗥𝗗\n" +
+                  "⚡ Auto updating every 10 seconds",
+                attachment: fs.createReadStream(latest.filePath)
+              },
+              threadID
+            );
+
+            cleanupFile(latest.filePath);
+
+            session.messageID = newMessage.messageID;
+          } catch (error) {
+            console.error("Live leaderboard error:", error);
+          }
+
+          session.updating = false;
+        }, 10000);
+
+        LIVE_SESSIONS.set(threadID, session);
+
+        setTimeout(() => {
+          const current = LIVE_SESSIONS.get(threadID);
+
+          if (current === session) {
+            clearInterval(session.interval);
+            LIVE_SESSIONS.delete(threadID);
+
+            try {
+              api.unsendMessage(session.messageID);
+            } catch (e) {}
+          }
+        }, 30 * 60 * 1000);
+
+        return;
+      } catch (error) {
+        console.error(error);
+
+        api.setMessageReaction("❌", messageID, () => {}, true);
+
+        return message.reply(
+          "❌ Failed to create live leaderboard."
+        );
+      }
+    }
+
+    api.setMessageReaction("⏳", messageID, () => {}, true);
+
+    try {
+      const result = await createLeaderboard(api, usersData);
+
+      api.setMessageReaction("🏆", messageID, () => {}, true);
+
+      return message.reply(
+        {
+          body: "🏆 𝗧𝗢𝗣 𝗕𝗔𝗟𝗔𝗡𝗖𝗘 𝗟𝗘𝗔𝗗𝗘𝗥𝗕𝗢𝗔𝗥𝗗",
+          attachment: fs.createReadStream(result.filePath)
+        },
+        () => {
+          cleanupFile(result.filePath);
+        }
+      );
+    } catch (error) {
+      console.error("Leaderboard error:", error);
+
+      api.setMessageReaction("❌", messageID, () => {}, true);
+
+      return message.reply(
+        "❌ Failed to generate leaderboard."
+      );
+    }
+  }
 };
+
+async function createLeaderboard(api, usersData) {
+  const allUsers = await usersData.getAll();
+
+  const validUsers = allUsers.filter(user => {
+    if (!user || !user.userID) return false;
+
+    const money = Number(user.money);
+
+    return (
+      Number.isFinite(money) ||
+      money === Infinity
+    );
+  });
+
+  const topUsers = validUsers
+    .sort((a, b) => {
+      const moneyA = Number(a.money);
+      const moneyB = Number(b.money);
+
+      if (moneyA === Infinity && moneyB !== Infinity) return -1;
+      if (moneyB === Infinity && moneyA !== Infinity) return 1;
+
+      return moneyB - moneyA;
+    })
+    .slice(0, 17);
+
+  const userInfoCache = {};
+
+  await Promise.all(
+    topUsers.map(async user => {
+      try {
+        const result = await api.getUserInfo(user.userID);
+
+        const info =
+          result?.[user.userID] ||
+          result ||
+          {};
+
+        userInfoCache[user.userID] = {
+          name:
+            info.name ||
+            user.name ||
+            "Facebook user",
+
+          thumbSrc:
+            info.thumbSrc ||
+            null
+        };
+      } catch (error) {
+        userInfoCache[user.userID] = {
+          name:
+            user.name ||
+            "Facebook user",
+
+          thumbSrc: null
+        };
+      }
+    })
+  );
+
+  const avatarCache = {};
+
+  await Promise.all(
+    topUsers.map(async user => {
+      const info =
+        userInfoCache[user.userID];
+
+      if (!info?.thumbSrc) return;
+
+      try {
+        const response = await axios.get(
+          info.thumbSrc,
+          {
+            responseType: "arraybuffer",
+            timeout: 10000
+          }
+        );
+
+        avatarCache[user.userID] =
+          await loadImage(
+            Buffer.from(response.data)
+          );
+      } catch (error) {
+        avatarCache[user.userID] = null;
+      }
+    })
+  );
+
+  const width = 800;
+  const height = 1800;
+
+  const canvas = createCanvas(
+    width,
+    height
+  );
+
+  const ctx = canvas.getContext("2d");
+
+  drawBackground(
+    ctx,
+    width,
+    height
+  );
+
+  drawHeader(
+    ctx,
+    width
+  );
+
+  drawTopThree(
+    ctx,
+    topUsers,
+    avatarCache,
+    userInfoCache,
+    width
+  );
+
+  drawRankingList(
+    ctx,
+    topUsers,
+    avatarCache,
+    userInfoCache,
+    width
+  );
+
+  drawFooter(
+    ctx,
+    width,
+    height
+  );
+
+  const cacheDir =
+    path.join(__dirname, "cache");
+
+  if (!fs.existsSync(cacheDir)) {
+    fs.mkdirSync(cacheDir, {
+      recursive: true
+    });
+  }
+
+  const filePath = path.join(
+    cacheDir,
+    `top_${Date.now()}_${Math.random()
+      .toString(36)
+      .slice(2)}.png`
+  );
+
+  fs.writeFileSync(
+    filePath,
+    canvas.toBuffer("image/png")
+  );
+
+  return {
+    filePath,
+    users: topUsers
+  };
+}
+
+function drawBackground(
+  ctx,
+  width,
+  height
+) {
+  ctx.fillStyle = "#020617";
+  ctx.fillRect(
+    0,
+    0,
+    width,
+    height
+  );
+
+  const bg =
+    ctx.createLinearGradient(
+      0,
+      0,
+      width,
+      height
+    );
+
+  bg.addColorStop(
+    0,
+    "#020617"
+  );
+
+  bg.addColorStop(
+    0.35,
+    "#07152f"
+  );
+
+  bg.addColorStop(
+    0.65,
+    "#0a1230"
+  );
+
+  bg.addColorStop(
+    1,
+    "#020617"
+  );
+
+  ctx.fillStyle = bg;
+
+  ctx.fillRect(
+    0,
+    0,
+    width,
+    height
+  );
+
+  ctx.globalAlpha = 0.15;
+
+  for (
+    let x = 0;
+    x < width;
+    x += 40
+  ) {
+    ctx.strokeStyle = "#248cff";
+    ctx.lineWidth = 1;
+
+    ctx.beginPath();
+
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, height);
+
+    ctx.stroke();
+  }
+
+  for (
+    let y = 0;
+    y < height;
+    y += 40
+  ) {
+    ctx.strokeStyle = "#248cff";
+    ctx.lineWidth = 1;
+
+    ctx.beginPath();
+
+    ctx.moveTo(0, y);
+    ctx.lineTo(width, y);
+
+    ctx.stroke();
+  }
+
+  ctx.globalAlpha = 1;
+
+  const glow1 =
+    ctx.createRadialGradient(
+      width / 2,
+      230,
+      20,
+      width / 2,
+      230,
+      400
+    );
+
+  glow1.addColorStop(
+    0,
+    "rgba(0,153,255,0.20)"
+  );
+
+  glow1.addColorStop(
+    1,
+    "rgba(0,153,255,0)"
+  );
+
+  ctx.fillStyle = glow1;
+
+  ctx.fillRect(
+    0,
+    0,
+    width,
+    600
+  );
+
+  const glow2 =
+    ctx.createRadialGradient(
+      100,
+      1300,
+      20,
+      100,
+      1300,
+      300
+    );
+
+  glow2.addColorStop(
+    0,
+    "rgba(140,0,255,0.12)"
+  );
+
+  glow2.addColorStop(
+    1,
+    "rgba(140,0,255,0)"
+  );
+
+  ctx.fillStyle = glow2;
+
+  ctx.fillRect(
+    0,
+    900,
+    width,
+    500
+  );
+}
+
+function drawHeader(
+  ctx,
+  width
+) {
+  ctx.textAlign = "center";
+
+  ctx.font =
+    "bold 22px Arial";
+
+  ctx.fillStyle = "#38d9ff";
+
+  ctx.fillText(
+    "",
+    width / 2,
+    42
+  );
+
+  ctx.font =
+    "bold 46px Arial";
+
+  ctx.fillStyle = "#ffffff";
+
+  ctx.shadowColor =
+    "#168cff";
+
+  ctx.shadowBlur = 18;
+
+  ctx.fillText(
+    "TOP BALANCE",
+    width / 2,
+    92
+  );
+
+  ctx.shadowBlur = 0;
+
+  ctx.font =
+    "bold 40px Arial";
+
+  ctx.fillStyle =
+    "#ff38d1";
+
+  ctx.fillText(
+    "LEADERBOARD",
+    width / 2,
+    137
+  );
+
+  ctx.font =
+    "16px Arial";
+
+  ctx.fillStyle =
+    "#a8c7e8";
+
+  ctx.fillText(
+    "BIGGEST BALANCE  •  TOP PLAYERS  •  REAL LEGENDS",
+    width / 2,
+    169
+  );
+
+  ctx.strokeStyle =
+    "#1ccfff";
+
+  ctx.lineWidth = 2;
+
+  ctx.beginPath();
+
+  ctx.moveTo(
+    60,
+    190
+  );
+
+  ctx.lineTo(
+    width - 60,
+    190
+  );
+
+  ctx.stroke();
+}
+
+function drawTopThree(
+  ctx,
+  topUsers,
+  avatarCache,
+  userInfoCache,
+  width
+) {
+  const positions = [
+    {
+      index: 1,
+      x: 175,
+      y: 310,
+      radius: 62,
+      color: "#b9d7ff",
+      rank: "2"
+    },
+    {
+      index: 0,
+      x: width / 2,
+      y: 290,
+      radius: 78,
+      color: "#ffd21a",
+      rank: "1"
+    },
+    {
+      index: 2,
+      x: 625,
+      y: 310,
+      radius: 62,
+      color: "#d86cff",
+      rank: "3"
+    }
+  ];
+
+  for (const pos of positions) {
+    const user =
+      topUsers[pos.index];
+
+    if (!user) continue;
+
+    const info =
+      userInfoCache[
+        user.userID
+      ] || {};
+
+    drawAvatar(
+      ctx,
+      avatarCache[user.userID],
+      pos.x,
+      pos.y,
+      pos.radius,
+      pos.color
+    );
+
+    ctx.beginPath();
+
+    ctx.arc(
+      pos.x +
+        pos.radius * 0.72,
+      pos.y -
+        pos.radius * 0.72,
+      17,
+      0,
+      Math.PI * 2
+    );
+
+    ctx.fillStyle =
+      pos.color;
+
+    ctx.fill();
+
+    ctx.fillStyle =
+      "#07101f";
+
+    ctx.font =
+      "bold 14px Arial";
+
+    ctx.textAlign =
+      "center";
+
+    ctx.textBaseline =
+      "middle";
+
+    ctx.fillText(
+      pos.rank,
+      pos.x +
+        pos.radius * 0.72,
+      pos.y -
+        pos.radius * 0.72
+    );
+
+    ctx.textBaseline =
+      "alphabetic";
+
+    let name =
+      info.name ||
+      user.name ||
+      "Facebook user";
+
+    if (name.length > 18) {
+      name =
+        name.substring(
+          0,
+          16
+        ) + "...";
+    }
+
+    ctx.font =
+      pos.index === 0
+        ? "bold 22px Arial"
+        : "bold 19px Arial";
+
+    ctx.fillStyle =
+      "#ffffff";
+
+    ctx.fillText(
+      name,
+      pos.x,
+      pos.y +
+        pos.radius +
+        32
+    );
+
+    ctx.font =
+      "bold 19px Arial";
+
+    ctx.fillStyle =
+      pos.color;
+
+    ctx.fillText(
+      `$${formatNumber(user.money)}`,
+      pos.x,
+      pos.y +
+        pos.radius +
+        62
+    );
+  }
+}
+
+function drawRankingList(
+  ctx,
+  topUsers,
+  avatarCache,
+  userInfoCache,
+  width
+) {
+  const startY = 500;
+  const itemHeight = 65;
+  const gap = 10;
+
+  ctx.textAlign =
+    "left";
+
+  ctx.font =
+    "bold 16px Arial";
+
+  ctx.fillStyle =
+    "#8faed0";
+
+  ctx.fillText(
+    "◆ RANKING",
+    40,
+    470
+  );
+
+  ctx.textAlign =
+    "right";
+
+  ctx.fillStyle =
+    "#36dfff";
+
+  ctx.fillText(
+    "BALANCE",
+    width - 40,
+    470
+  );
+
+  const balances =
+    topUsers.map(user => {
+      const value =
+        Number(user.money);
+
+      if (
+        value === Infinity
+      ) {
+        return Infinity;
+      }
+
+      if (
+        !Number.isFinite(value) ||
+        value < 0
+      ) {
+        return 0;
+      }
+
+      return value;
+    });
+
+  const finiteBalances =
+    balances.filter(
+      value =>
+        Number.isFinite(value) &&
+        value > 0
+    );
+
+  const maxFiniteBalance =
+    Math.max(
+      ...finiteBalances,
+      1
+    );
+
+  const minFiniteBalance =
+    Math.min(
+      ...finiteBalances,
+      1
+    );
+
+  for (
+    let i = 3;
+    i < topUsers.length;
+    i++
+  ) {
+    const user =
+      topUsers[i];
+
+    const y =
+      startY +
+      (i - 3) *
+        (itemHeight + gap);
+
+    drawCard(
+      ctx,
+      30,
+      y,
+      width - 60,
+      itemHeight,
+      i
+    );
+
+    ctx.textAlign =
+      "left";
+
+    ctx.font =
+      "bold 17px Arial";
+
+    ctx.fillStyle =
+      "#44dfff";
+
+    ctx.fillText(
+      `#${i + 1}`,
+      45,
+      y + 39
+    );
+
+    const avatarX = 80;
+    const avatarY =
+      y + 32;
+    const avatarRadius = 20;
+
+    drawSmallAvatar(
+      ctx,
+      avatarCache[user.userID],
+      avatarX,
+      avatarY,
+      avatarRadius
+    );
+
+    const info =
+      userInfoCache[
+        user.userID
+      ] || {};
+
+    let name =
+      info.name ||
+      user.name ||
+      "Facebook user";
+
+    if (name.length > 15) {
+      name =
+        name.substring(
+          0,
+          13
+        ) + "...";
+    }
+
+    ctx.font =
+      "bold 17px Arial";
+
+    ctx.fillStyle =
+      "#e9f4ff";
+
+    ctx.fillText(
+      name,
+      125,
+      y + 38
+    );
+
+    const barX = 270;
+    const barY = y + 26;
+    const barWidth = 245;
+    const barHeight = 12;
+
+    drawRoundedRect(
+      ctx,
+      barX,
+      barY,
+      barWidth,
+      barHeight,
+      6,
+      "rgba(255,255,255,0.07)"
+    );
+
+    const money =
+      Number(user.money);
+
+    let ratio = 0;
+
+    if (
+      money === Infinity
+    ) {
+      ratio = 1;
+    } else if (
+      Number.isFinite(money) &&
+      money > 0
+    ) {
+      const maxLog =
+        Math.log10(
+          maxFiniteBalance + 1
+        );
+
+      const minLog =
+        Math.log10(
+          minFiniteBalance + 1
+        );
+
+      const currentLog =
+        Math.log10(
+          money + 1
+        );
+
+      if (
+        maxLog > minLog
+      ) {
+        ratio =
+          (currentLog - minLog) /
+          (maxLog - minLog);
+      } else {
+        ratio = 1;
+      }
+    }
+
+    ratio = Math.max(
+      0,
+      Math.min(
+        1,
+        ratio
+      )
+    );
+
+    const activeWidth =
+      money === Infinity
+        ? barWidth
+        : money > 0
+        ? Math.max(
+            10,
+            ratio * barWidth
+          )
+        : 4;
+
+    const barGradient =
+      ctx.createLinearGradient(
+        barX,
+        0,
+        barX +
+          activeWidth,
+        0
+      );
+
+    barGradient.addColorStop(
+      0,
+      "#00d9ff"
+    );
+
+    barGradient.addColorStop(
+      0.5,
+      "#00f0ff"
+    );
+
+    barGradient.addColorStop(
+      1,
+      "#a855f7"
+    );
+
+    ctx.shadowColor =
+      "#00d9ff";
+
+    ctx.shadowBlur = 10;
+
+    drawRoundedRect(
+      ctx,
+      barX,
+      barY,
+      activeWidth,
+      barHeight,
+      6,
+      barGradient
+    );
+
+    ctx.shadowBlur = 0;
+
+    ctx.textAlign =
+      "right";
+
+    ctx.font =
+      "bold 17px Arial";
+
+    if (
+      money === Infinity
+    ) {
+      ctx.fillStyle =
+        "#ffd21a";
+    } else {
+      ctx.fillStyle =
+        "#36f5d2";
+    }
+
+    ctx.fillText(
+      `$${formatNumber(user.money)}`,
+      width - 45,
+      y + 39
+    );
+  }
+}
+
+function drawCard(
+  ctx,
+  x,
+  y,
+  width,
+  height,
+  index
+) {
+  const gradient =
+    ctx.createLinearGradient(
+      x,
+      y,
+      x + width,
+      y
+    );
+
+  gradient.addColorStop(
+    0,
+    "rgba(5,25,55,0.92)"
+  );
+
+  gradient.addColorStop(
+    0.5,
+    "rgba(8,18,48,0.95)"
+  );
+
+  gradient.addColorStop(
+    1,
+    "rgba(32,8,55,0.92)"
+  );
+
+  drawRoundedRect(
+    ctx,
+    x,
+    y,
+    width,
+    height,
+    12,
+    gradient
+  );
+
+  ctx.strokeStyle =
+    index % 2 === 0
+      ? "#10cfff"
+      : "#9d4edd";
+
+  ctx.lineWidth = 1.5;
+
+  ctx.shadowColor =
+    index % 2 === 0
+      ? "#10cfff"
+      : "#9d4edd";
+
+  ctx.shadowBlur = 5;
+
+  ctx.beginPath();
+
+  ctx.roundRect(
+    x,
+    y,
+    width,
+    height,
+    12
+  );
+
+  ctx.stroke();
+
+  ctx.shadowBlur = 0;
+}
+
+function drawAvatar(
+  ctx,
+  image,
+  x,
+  y,
+  radius,
+  borderColor
+) {
+  ctx.save();
+
+  ctx.beginPath();
+
+  ctx.arc(
+    x,
+    y,
+    radius + 7,
+    0,
+    Math.PI * 2
+  );
+
+  ctx.strokeStyle =
+    borderColor;
+
+  ctx.lineWidth = 3;
+
+  ctx.shadowColor =
+    borderColor;
+
+  ctx.shadowBlur = 15;
+
+  ctx.stroke();
+
+  ctx.shadowBlur = 0;
+
+  ctx.beginPath();
+
+  ctx.arc(
+    x,
+    y,
+    radius,
+    0,
+    Math.PI * 2
+  );
+
+  ctx.clip();
+
+  if (image) {
+    ctx.drawImage(
+      image,
+      x - radius,
+      y - radius,
+      radius * 2,
+      radius * 2
+    );
+  } else {
+    ctx.fillStyle =
+      "#17233c";
+
+    ctx.fillRect(
+      x - radius,
+      y - radius,
+      radius * 2,
+      radius * 2
+    );
+
+    ctx.fillStyle =
+      "#718096";
+
+    ctx.font =
+      "bold 28px Arial";
+
+    ctx.textAlign =
+      "center";
+
+    ctx.textBaseline =
+      "middle";
+
+    ctx.fillText(
+      "?",
+      x,
+      y
+    );
+  }
+
+  ctx.restore();
+}
+
+function drawSmallAvatar(
+  ctx,
+  image,
+  x,
+  y,
+  radius
+) {
+  ctx.save();
+
+  ctx.beginPath();
+
+  ctx.arc(
+    x,
+    y,
+    radius + 2,
+    0,
+    Math.PI * 2
+  );
+
+  ctx.strokeStyle =
+    "#22d3ee";
+
+  ctx.lineWidth = 1.5;
+
+  ctx.stroke();
+
+  ctx.beginPath();
+
+  ctx.arc(
+    x,
+    y,
+    radius,
+    0,
+    Math.PI * 2
+  );
+
+  ctx.clip();
+
+  if (image) {
+    ctx.drawImage(
+      image,
+      x - radius,
+      y - radius,
+      radius * 2,
+      radius * 2
+    );
+  } else {
+    ctx.fillStyle =
+      "#1e293b";
+
+    ctx.fillRect(
+      x - radius,
+      y - radius,
+      radius * 2,
+      radius * 2
+    );
+
+    ctx.fillStyle =
+      "#94a3b8";
+
+    ctx.font =
+      "bold 16px Arial";
+
+    ctx.textAlign =
+      "center";
+
+    ctx.textBaseline =
+      "middle";
+
+    ctx.fillText(
+      "?",
+      x,
+      y
+    );
+  }
+
+  ctx.restore();
+}
+
+function drawFooter(
+  ctx,
+  width,
+  height
+) {
+  ctx.textAlign =
+    "center";
+
+  ctx.font =
+    "bold 18px Arial";
+
+  ctx.fillStyle =
+    "#36dfff";
+
+  ctx.fillText(
+    "◆  GOAT-BOT-UPDATED ◆",
+    width / 2,
+    height - 70
+  );
+
+  ctx.font =
+    "13px Arial";
+
+  ctx.fillStyle =
+    "rgba(255,255,255,0.45)";
+
+  ctx.fillText(
+    "MADE BY XALMAN  •  BIGGER BALANCE, BIGGER DREAMS",
+    width / 2,
+    height - 43
+  );
+}
+
+function drawRoundedRect(
+  ctx,
+  x,
+  y,
+  width,
+  height,
+  radius,
+  fill
+) {
+  ctx.beginPath();
+
+  ctx.moveTo(
+    x + radius,
+    y
+  );
+
+  ctx.arcTo(
+    x + width,
+    y,
+    x + width,
+    y + height,
+    radius
+  );
+
+  ctx.arcTo(
+    x + width,
+    y + height,
+    x,
+    y + height,
+    radius
+  );
+
+  ctx.arcTo(
+    x,
+    y + height,
+    x,
+    y,
+    radius
+  );
+
+  ctx.arcTo(
+    x,
+    y,
+    x + width,
+    y,
+    radius
+  );
+
+  ctx.closePath();
+
+  ctx.fillStyle = fill;
+  ctx.fill();
+}
+
+function formatNumber(num) {
+  const n = Number(num);
+
+  if (n === Infinity) {
+    return "∞ Unlimited";
+  }
+
+  if (
+    n === -Infinity
+  ) {
+    return "−∞";
+  }
+
+  if (
+    Number.isNaN(n)
+  ) {
+    return "0";
+  }
+
+  if (
+    !Number.isFinite(n)
+  ) {
+    return "∞ Unlimited";
+  }
+
+  if (n < 1000) {
+    return Math.floor(n)
+      .toString();
+  }
+
+  const units = [
+    {
+      value: 1e63,
+      name: "Vigintillion"
+    },
+    {
+      value: 1e60,
+      name: "Novemdecillion"
+    },
+    {
+      value: 1e57,
+      name: "Octodecillion"
+    },
+    {
+      value: 1e54,
+      name: "Septendecillion"
+    },
+    {
+      value: 1e51,
+      name: "Sexdecillion"
+    },
+    {
+      value: 1e48,
+      name: "Quindecillion"
+    },
+    {
+      value: 1e45,
+      name: "Quattuordecillion"
+    },
+    {
+      value: 1e42,
+      name: "Tredecillion"
+    },
+    {
+      value: 1e39,
+      name: "Duodecillion"
+    },
+    {
+      value: 1e36,
+      name: "Undecillion"
+    },
+    {
+      value: 1e33,
+      name: "Decillion"
+    },
+    {
+      value: 1e30,
+      name: "Nonillion"
+    },
+    {
+      value: 1e27,
+      name: "Octillion"
+    },
+    {
+      value: 1e24,
+      name: "Septillion"
+    },
+    {
+      value: 1e21,
+      name: "Sextillion"
+    },
+    {
+      value: 1e18,
+      name: "Quintillion"
+    },
+    {
+      value: 1e15,
+      name: "Quadrillion"
+    },
+    {
+      value: 1e12,
+      name: "Trillion"
+    },
+    {
+      value: 1e9,
+      name: "Billion"
+    },
+    {
+      value: 1e6,
+      name: "Million"
+    },
+    {
+      value: 1e3,
+      name: "Thousand"
+    }
+  ];
+
+  for (
+    const unit of units
+  ) {
+    if (
+      n >= unit.value
+    ) {
+      const value =
+        n / unit.value;
+
+      return (
+        value
+          .toFixed(2)
+          .replace(
+            /\.00$/,
+            ""
+          )
+          .replace(
+            /(\.\d)0$/,
+            "$1"
+          ) +
+        " " +
+        unit.name
+      );
+    }
+  }
+
+  return n.toString();
+}
+
+function cleanupFile(
+  filePath
+) {
+  setTimeout(() => {
+    try {
+      if (
+        fs.existsSync(
+          filePath
+        )
+      ) {
+        fs.unlinkSync(
+          filePath
+        );
+      }
+    } catch (error) {}
+  }, 5000);
+}

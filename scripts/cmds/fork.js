@@ -1,46 +1,37 @@
-const axios = require("axios");
-
 module.exports = {
   config: {
     name: "fork",
-    version: "0.0.7",
-    author: "Azadx69x",
-    countDown: 3,
+    version: "4.0",
+    author: "Shihab",
+    countDown: 5,
     role: 0,
-    category: "system",
-    shortDescription: "𝐆𝐢𝐭𝐇𝐮𝐛 𝐅𝐨𝐫𝐤",
-    longDescription: "𝐅𝐞𝐭𝐜𝐡 𝐟𝐨𝐫𝐤",
+    shortDescription: "Show github repository link ",
+    category: "utility",
     guide: {
-      en: "{pn}"
+      en: "{p}fork"
     }
   },
 
-  onStart: async function ({ message }) {
-    try {
-      const repo = "azadx69x/X69X-BOT-V3";
+  langs: {
+    en: {
+      current: `📌 𝐆𝐎𝐀𝐓-𝐁𝐎𝐓
+━━━━━━━━━━━━━━━━━━━━━━━━
+👑 𝐜𝐨𝐧𝐭𝐫𝐢𝐛𝐮𝐭𝐨𝐫 : NΞGΛTIVΞ XΛLMΛN
+🔗 𝐫𝐞𝐩𝐨𝐬𝐢𝐭𝐨𝐫𝐲      : %1
+💎 𝐬𝐭𝐚𝐭𝐮𝐬   : 𝐚𝐥𝐰𝐚𝐲𝐬 𝐮𝐩𝐝𝐚𝐭𝐢𝐧𝐠
+━━━━━━━━━━━━━━━━━━━━━━━━`
+    }
+  },
 
-      const res = await axios.get(`https://api.github.com/repos/${repo}`);
-      const data = res.data;
+  onStart: async function ({ message, getLang }) {
+    const link = "https://github.com/goatbotnx/GOAT-BOT-UPDATED";
+    return message.reply(getLang("current", link));
+  },
 
-      const text = `
-𝐗69𝐗 𝐁𝐎𝐓 𝐕3
-𝐔𝐩𝐝𝐚𝐭𝐞 𝐅𝐨𝐫𝐤
-
-📦 𝐍𝐚𝐦𝐞: ${data.name}
-👑 𝐎𝐰𝐧𝐞𝐫: ${data.owner.login}
-🍴 𝐅𝐨𝐫𝐤𝐬: ${data.forks_count}
-⭐ 𝐒𝐭𝐚𝐫𝐬: ${data.stargazers_count}
-👀 𝐖𝐚𝐭𝐜𝐡𝐞𝐫𝐬: ${data.watchers_count}
-
-🔗 𝐅𝐨𝐫𝐤 𝐋𝐢𝐧𝐤:
-${data.html_url}
-`;
-
-      return message.reply(text);
-
-    } catch (err) {
-      console.error("FORK CMD ERROR:", err);
-      return message.reply("❌ 𝐂𝐨𝐮𝐥𝐝 𝐧𝐨𝐭 𝐟𝐞𝐭𝐜𝐡 𝐟𝐨𝐫𝐤.");
+  onChat: async function ({ message, getLang, event }) {
+    if (event.body && event.body.toLowerCase() === "fork") {
+      const link = "https://github.com/goatbotnx/GOAT-BOT-UPDATED";
+      return message.reply(getLang("current", link));
     }
   }
 };

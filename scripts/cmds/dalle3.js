@@ -1,93 +1,140 @@
 const axios = require("axios");
-const fs = require("fs");
+
+const API_CONFIG_URL = "https://raw.githubusercontent.com/goatbotnx/xalmanx210/refs/heads/main/apis.json";
+const API_KEY = "xalman-hub";
+let apiBaseUrl = null;
+let apiConfigRequest = null;
+
+async function getApiBaseUrl() {
+  if (apiBaseUrl) return apiBaseUrl;
+
+  if (!apiConfigRequest) {
+    apiConfigRequest = axios
+      .get(API_CONFIG_URL, { timeout: 15000 })
+      .then(({ data }) => {
+        const baseUrl = data?.[API_KEY];
+
+        if (typeof baseUrl !== "string" || !baseUrl.trim()) {
+          throw new Error(`Missing API key in apis.json: ${API_KEY}`);
+        }
+
+        apiBaseUrl = baseUrl.replace(/\/+$/, "");
+        return apiBaseUrl;
+      })
+      .finally(() => {
+        apiConfigRequest = null;
+      });
+  }
+
+  return apiConfigRequest;
+}
+const fs = require("fs-extra");
 const path = require("path");
 
-const baseApiUrl = async () => {
-        const base = await axios.get("https://raw.githubusercontent.com/mahmudx7/HINATA/main/baseApiUrl.json");
-        return base.data.mahmud;
-};
-
 module.exports = {
-        config: {
-                name: "dalle3",
-                version: "1.7",
-                author: "MahMUD",
-                countDown: 15,
-                role: 0,
-                description: {
-                        bn: "DALL-E 3 মডেল দিয়ে এআই ছবি তৈরি করুন",
-                        en: "Generate AI images using DALL-E 3 model",
-                        vi: "Tạo hình ảnh AI bằng mô hình DALL-E 3"
-                },
-                category: "image gen",
-                guide: {
-                        bn: '   {pn} <prompt>: ছবি তৈরি করতে বর্ণনা দিন',
-                        en: '   {pn} <prompt>: Provide a description to generate image',
-                        vi: '   {pn} <prompt>: Cung cấp mô tả để tạo hình ảnh'
-                }
+  config: {
+    name: "dalle",
+    aliases: ["dalle3", "dall-e"],
+    version: "1.4",
+    author: "Shihab",
+    countDown: 5,
+    role: 0,
+    shortDescription: "Generate image using DALL-E 3",
+    longDescription: "Generate an image using the DALL-E 3 AI model",
+    category: "AI",
+    guide: "{pn} <prompt>\nExample: /dalle cat in space"
+  },
+
+  onStart: async function ({ api, event, args }) {
+    const { threadID, messageID } = event;
+    const prompt = args.join(" ");
+
+    if (!prompt) {
+      return api.sendMessage(
+        "✨ Please enter a prompt!\nExample: /dalle cat in space",
+        threadID,
+        messageID
+      );
+    }
+
+    api.setMessageReaction("⏳", messageID, () => {}, true);
+
+    const cacheDir = path.join(__dirname, "cache");
+    if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir, { recursive: true });
+
+    try {
+      const apiUrl = `${await getApiBaseUrl()}/api/dalle3?prompt=${encodeURIComponent(prompt)}`;
+      const response = await axios.get(apiUrl, {
+        timeout: 120000,
+        headers: { 
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+          "Accept": "image/*, application/json"
         },
+        responseType: "arraybuffer"
+      });
 
-        langs: {
-                bn: {
-                        noPrompt: "× বেবি, ছবি তৈরি করার জন্য কিছু তো লেখো",
-                        wait: "🔄 | DALL-E 3 ছবি তৈরি হচ্ছে, একটু অপেক্ষা করো বেবি...",
-                        success: "𝐇𝐞𝐫𝐞'𝐬 𝐲𝐨𝐮𝐫 𝐃𝐀𝐋𝐋-𝐄 𝟑 𝐢𝐦𝐚𝐠𝐞 𝐛𝐚𝐛𝐲 <😘",
-                        error: "× সমস্যা হয়েছে: %1। প্রয়োজনে Contact MahMUD।\n•WhatsApp: 01836298139"
-                },
-                en: {
-                        noPrompt: "× Baby, please provide a prompt to generate image",
-                        wait: "🔄 | DALL-E 3 Image Generating, please wait...",
-                        success: "𝐇𝐞𝐫𝐞'𝐬 𝐲𝐨𝐮𝐫 𝐃𝐀𝐋𝐋-𝐄 𝟑 𝐢𝐦𝐚𝐠𝐞 𝐛𝐚𝐛𝐲 <😘",
-                        error: "× API error: %1. Contact MahMUD for help.\n•WhatsApp: 01836298139"
-                },
-                vi: {
-                        noPrompt: "× Cưng ơi, vui lòng nhập mô tả để tạo ảnh",
-                        wait: "🔄 | Đang tạo ảnh DALL-E 3, vui lòng chờ chút...",
-                        success: "Ảnh DALL-E 3 của cưng đây",
-                        error: "× Lỗi: %1. Liên hệ MahMUD để hỗ trợ.\n•WhatsApp: 01836298139"
-                }
-        },
+      const contentType = response.headers["content-type"] || "";
+      let filePath = null;
 
-        onStart: async function ({ api, event, args, message, getLang }) {
-                const authorName = String.fromCharCode(77, 97, 104, 77, 85, 68);
-                if (this.config.author !== authorName) {
-                        return api.sendMessage("You are not authorized to change the author name.", event.threadID, event.messageID);
-                }
-
-                const prompt = args.join(" ");
-                if (!prompt) return message.reply(getLang("noPrompt"));
-
-                const cacheDir = path.join(__dirname, "cache");
-                const filePath = path.join(cacheDir, `dalle3_${Date.now()}.png`);
-                if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir);
-
-                try {
-                        api.setMessageReaction("⏳", event.messageID, () => {}, true);
-                        const waitMsg = await message.reply(getLang("wait"));
-
-                        const baseUrl = await baseApiUrl();
-                        const response = await axios.post(`${baseUrl}/api/dalle3`, 
-                                { prompt }, 
-                                { responseType: "arraybuffer" }
-                        );
-
-                        fs.writeFileSync(filePath, Buffer.from(response.data));
-
-                        if (waitMsg?.messageID) api.unsendMessage(waitMsg.messageID);
-                        api.setMessageReaction("✅", event.messageID, () => {}, true);
-
-                        return message.reply({
-                                body: getLang("success"),
-                                attachment: fs.createReadStream(filePath)
-                        }, () => {
-                                if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-                        });
-
-                } catch (err) {
-                        console.error("Dalle3 Error:", err);
-                        api.setMessageReaction("❌", event.messageID, () => {}, true);
-                        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-                        return message.reply(getLang("error", err.message));
-                }
+      if (contentType.includes("image")) {
+        const ext = contentType.split("/")[1]?.split(";")[0] || "png";
+        filePath = path.join(cacheDir, `dalle_${Date.now()}.${ext}`);
+        fs.writeFileSync(filePath, Buffer.from(response.data));
+      } else {
+        const textData = response.data.toString("utf8");
+        const jsonData = JSON.parse(textData);
+        
+        let imageUrl = null;
+        if (jsonData?.image) imageUrl = jsonData.image;
+        else if (jsonData?.url) imageUrl = jsonData.url;
+        else if (jsonData?.image_url) imageUrl = jsonData.image_url;
+        else if (jsonData?.data && typeof jsonData.data === "string" && jsonData.data.startsWith("http")) imageUrl = jsonData.data;
+        else if (jsonData?.data && jsonData.data.startsWith("data:image")) {
+          const base64Data = jsonData.data.replace(/^data:image\/\w+;base64,/, "");
+          const ext = jsonData.data.match(/data:image\/(\w+);base64,/)?.[1] || "png";
+          filePath = path.join(cacheDir, `dalle_${Date.now()}.${ext}`);
+          fs.writeFileSync(filePath, Buffer.from(base64Data, "base64"));
         }
+
+        if (!filePath && imageUrl) {
+          const ext = imageUrl.split(".").pop().split("?")[0] || "png";
+          filePath = path.join(cacheDir, `dalle_${Date.now()}.${ext}`);
+          const imgResponse = await axios.get(imageUrl, {
+            responseType: "arraybuffer",
+            timeout: 60000
+          });
+          fs.writeFileSync(filePath, Buffer.from(imgResponse.data));
+        }
+
+        if (!filePath) {
+          throw new Error("No image found in response");
+        }
+      }
+
+      if (!filePath || !fs.existsSync(filePath)) {
+        throw new Error("Failed to save image");
+      }
+
+      api.setMessageReaction("✅", messageID, () => {}, true);
+
+      const msg = `🎨 𝗗𝗔𝗟𝗟-𝗘 𝗚𝗘𝗡𝗘𝗥𝗔𝗧𝗘𝗗`;
+
+      return api.sendMessage(
+        {
+          body: msg,
+          attachment: fs.createReadStream(filePath)
+        },
+        threadID,
+        () => {
+          if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+        },
+        messageID
+      );
+
+    } catch (error) {
+      console.error("DALL-E error:", error.message);
+      api.setMessageReaction("❌", messageID, () => {}, true);
+      return api.sendMessage("❌ Failed to generate image. Please try again.", threadID, messageID);
+    }
+  }
 };

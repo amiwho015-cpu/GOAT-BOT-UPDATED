@@ -3,10 +3,10 @@ const { removeHomeDir, log } = global.utils;
 module.exports = {
 	config: {
 		name: "eval",
-		version: "1.7",
-		author: "NtKhang",
+		version: "1.6",
+		author: "Shihab",
 		countDown: 5,
-		role: 6,
+		role: 2,
 		description: {
 			vi: "Test code nhanh",
 			en: "Test code quickly"
@@ -28,9 +28,6 @@ module.exports = {
 	},
 
 	onStart: async function ({ api, args, message, event, threadsData, usersData, dashBoardData, globalData, threadModel, userModel, dashBoardModel, globalModel, role, commandName, getLang }) {
-		
-		const apis = api;
-		
 		function output(msg) {
 			if (typeof msg == "number" || typeof msg == "boolean" || typeof msg == "function")
 				msg = msg.toString();
@@ -46,11 +43,9 @@ module.exports = {
 
 			message.reply(msg);
 		}
-		
 		function out(msg) {
 			output(msg);
 		}
-		
 		function mapToObj(map) {
 			const obj = {};
 			map.forEach(function (v, k) {
@@ -58,18 +53,6 @@ module.exports = {
 			});
 			return obj;
 		}
-		
-		function getAvailableApis() {
-			return Object.keys(api).filter(key => typeof api[key] === 'function');
-		}
-		
-		function getApiInfo(apiName) {
-			if (typeof api[apiName] === 'function') {
-				return `✅ ${apiName} is a function`;
-			}
-			return `❌ ${apiName} not found or not a function`;
-		}
-		
 		const cmd = `
 		(async () => {
 			try {

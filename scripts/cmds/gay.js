@@ -1,98 +1,79 @@
 const axios = require("axios");
-const fs = require("fs");
-const path = require("path");
-
-const baseApiUrl = async () => {
-        const base = await axios.get("https://raw.githubusercontent.com/mahmudx7/HINATA/main/baseApiUrl.json");
-        return base.data.mahmud;
-};
+const { createCanvas, loadImage } = require("canvas");
+const fs = require("fs-extra");
 
 module.exports = {
-        config: {
-                name: "gay",
-                version: "1.7",
-                author: "MahMUD",
-                countDown: 10,
-                role: 0,
-                description: {
-                        bn: "কাউকে গে (Gay) ইফেক্ট দিন",
-                        en: "Give someone a gay effect",
-                        vi: "Tạo hiệu ứng gay cho ai đó"
-                },
-                category: "fun",
-                guide: {
-                        bn: '   {pn} <@tag>: কাউকে ট্যাগ করে গে ইফেক্ট দিন'
-                                + '\n   {pn} <uid>: UID দিয়ে ইফেক্ট তৈরি করুন'
-                                + '\n   (অথবা মেসেজে রিপ্লাই দিয়ে ব্যবহার করুন)',
-                        en: '   {pn} <@tag>: Give gay effect by tagging'
-                                + '\n   {pn} <uid>: Create effect using UID'
-                                + '\n   (Or use by replying to a message)',
-                        vi: '   {pn} <@tag>: Tạo hiệu ứng gay bằng cách gắn thẻ'
-                                + '\n   {pn} <uid>: Tạo hiệu ứng bằng UID'
-                                + '\n   (Hoặc phản hồi tin nhắn)'
-                }
-        },
+  config: {
+    name: "gay",
+    version: "3.1",
+    author: "Shihab",
+    countDown: 5,
+    role: 0,
+    shortDescription: "Gay canvas with fixed syntax",
+    longDescription: "Places PFPs on background with fixed destructuring and blacklist.",
+    category: "FUN & SOCIAL",
+    guide: "{pn} @tag | {pn} [reply]"
+  },
 
-        langs: {
-                bn: {
-                        noTarget: "× বেবি, কাউকে মেনশন দাও, রিপ্লাই করো অথবা UID দাও! 🐸",
-                        success: "𝐄𝐟𝐟𝐞𝐜𝐭 𝐠𝐚𝐲 𝐬𝐮𝐜𝐜𝐞𝐬𝐬𝐟𝐮𝐥 🐸",
-                        error: "× ইফেক্ট তৈরি করতে সমস্যা হয়েছে: %1। প্রয়োজনে Contact MahMUD।"
-                },
-                en: {
-                        noTarget: "× Baby, mention, reply, or provide UID of the target! 🐸",
-                        success: "𝐄𝐟𝐟𝐞𝐜𝐭 𝐠𝐚𝐲 𝐬𝐮𝐜𝐜𝐞𝐬𝐬𝐟𝐮𝐥 🐸",
-                        error: "× Failed to create effect: %1. Contact MahMUD for help."
-                },
-                vi: {
-                        noTarget: "× Cưng ơi, hãy gắn thẻ, phản hồi hoặc cung cấp UID mục tiêu! 🐸",
-                        success: "Hiệu ứng gay thành công 🐸",
-                        error: "× Lỗi tạo hiệu ứng: %1. Liên hệ MahMUD để hỗ trợ."
-                }
-        },
+  onStart: async function ({ api, event, args, usersData }) {
 
-        onStart: async function ({ api, event, args, message, getLang }) {
-                const authorName = String.fromCharCode(77, 97, 104, 77, 85, 68);
-                if (this.config.author !== authorName) {
-                        return api.sendMessage("You are not authorized to change the author name.", event.threadID, event.messageID);
-                }
+    const { threadID, messageID, senderID, mentions, type, messageReply } = event; 
+    
+    let targetID;
+    if (type === "message_reply") {
+      targetID = messageReply.senderID;
+    } else if (Object.keys(mentions).length > 0) {
+      targetID = Object.keys(mentions)[0];
+    } else {
+      return api.sendMessage("❌ Please mention someone or reply to their message to use this command!", threadID, messageID);
+    }
 
-                const { mentions, messageReply } = event;
-                let id2;
+    const blacklistedID = "61570641868681";
+    if (targetID == blacklistedID) {
+      return api.sendMessage("❌ Ei user er upor ei command kaj korbe na!", threadID, messageID);
+    }
 
-                if (messageReply) {
-                        id2 = messageReply.senderID;
-                } else if (Object.keys(mentions).length > 0) {
-                        id2 = Object.keys(mentions)[0];
-                } else if (args[0] && !isNaN(args[0])) {
-                        id2 = args[0];
-                }
+    try {
+      api.sendMessage("Processing...", threadID, messageID);
 
-                if (!id2) return message.reply(getLang("noTarget"));
+      const backgroundURL = "https://i.ibb.co/Ld1J2cx6/598832374d5c.png";
+      const senderPFPURL = `https://graph.facebook.com/${senderID}/picture?width=512&height=512&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`;
+      const targetPFPURL = `https://graph.facebook.com/${targetID}/picture?width=512&height=512&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`;
 
-                const cacheDir = path.join(__dirname, "cache");
-                const filePath = path.join(cacheDir, `gay_${id2}.png`);
+      const [bgImg, senderPFP, targetPFP] = await Promise.all([
+        loadImage(backgroundURL),
+        loadImage(senderPFPURL),
+        loadImage(targetPFPURL)
+      ]);
 
-                try {
-                        if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir);
+      const canvas = createCanvas(bgImg.width, bgImg.height);
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
 
-                        const baseUrl = await baseApiUrl();
-                        const url = `${baseUrl}/api/dig?type=gay&user=${id2}`;
+      const drawCirclePFP = (img, x, y, size) => {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2, true);
+        ctx.closePath();
+        ctx.clip();
+        ctx.drawImage(img, x, y, size, size);
+        ctx.restore();
+      };
 
-                        const response = await axios.get(url, { responseType: "arraybuffer" });
-                        fs.writeFileSync(filePath, Buffer.from(response.data));
+      drawCirclePFP(senderPFP, 400, 170, 60); 
+      drawCirclePFP(targetPFP, 210, 180, 60);
 
-                        return message.reply({
-                                body: getLang("success"),
-                                attachment: fs.createReadStream(filePath)
-                        }, () => {
-                                if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-                        });
+      const path = __dirname + `/cache/gay_${senderID}.png`;
+      fs.writeFileSync(path, canvas.toBuffer("image/png"));
 
-                } catch (err) {
-                        console.error("Gay Effect Error:", err);
-                        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-                        return message.reply(getLang("error", err.message));
-                }
-        }
+      return api.sendMessage({
+        body: `🌈 Gay user ${await usersData.getName(targetID)}!`,
+        attachment: fs.createReadStream(path)
+      }, threadID, () => fs.unlinkSync(path), messageID);
+
+    } catch (e) {
+      console.error(e);
+      return api.sendMessage("❌ Error: Image generate kora somvob hoyni.", threadID, messageID);
+    }
+  }
 };

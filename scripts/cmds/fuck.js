@@ -1,64 +1,122 @@
-const { Jimp } = require("jimp");
-const { Readable } = require("stream");
+const fs = require("fs-extra");
+const Canvas = require("canvas");
+const path = require("path");
+
+const ACCESS_TOKEN = "350685531728|62f8ce9f74b12f84c123cc23437a4a32";
+
+const access = ["61570641868681", "61583288650615"];
+
+const backgrounds = [
+  "https://i.imgur.com/3i8Rxbu.jpeg"
+];
 
 module.exports = {
   config: {
-    name: "fak",
-    aliases: ["fuck"],
-    version: "1.1",
-    author: "frnAlt",
-    countDown: 20,
-    role: 2,
-    shortDescription: "NSFW fun command",
-    longDescription: "Generates humorous card with mentioned user",
-    category: "nsfw",
-    guide: "{pn} @tag"
+    name: "fuck",
+    version: "3.0",
+    author: "Shihab",
+    role: 0,
+    countDown: 5,
+    shortDescription: "fuck image effect",
+    longDescription: "Create a fuck image with tagged user.",
+    category: "FUN & SOCIAL",
+    guide: {
+      en: "{pn} @mention\n{pn} reply\n{pn} uid"
+    }
   },
 
-  onStart: async function ({ message, event, args, usersData }) {
-    const mention = Object.keys(event.mentions || {});
-    if (mention.length === 0) {
-      return message.reply("Please mention someone!");
+  onStart: async function ({ api, event, message, usersData }) {
+
+    api.setMessageReaction("🕜", event.messageID, () => {}, true);
+
+    const senderID = event.senderID;
+
+    let targetID = null;
+
+    if (event.messageReply?.senderID) {
+      targetID = event.messageReply.senderID;
+    } 
+    else if (Object.keys(event.mentions || {}).length > 0) {
+      targetID = Object.keys(event.mentions)[0];
+    } 
+    else {
+      const match = event.body?.match(/\b\d{8,20}\b/);
+      if (match) targetID = match[0];
     }
-    const one = mention.length === 1 ? event.senderID : mention[1];
-    const two = mention[0];
+
+    if (!targetID) {
+      return message.reply("❌ | Please mention/reply or provide a valid UID.");
+    }
+
+    if (access.includes(targetID)) {
+      return message.reply("YOU CAN TRY SUCK HER DICK 😌🥀.");
+    }
 
     try {
-      const token = "6628568379%7Cc1e620fa708a1d5696fb991c1bde5662";
-      const avoneUrl = `https://graph.facebook.com/${one}/picture?width=512&height=512&access_token=${token}`;
-      const avtwoUrl = `https://graph.facebook.com/${two}/picture?width=512&height=512&access_token=${token}`;
+      const senderName = await usersData.getName(senderID).catch(() => "You");
+      const targetName = await usersData.getName(targetID).catch(() => "Friend");
 
-      const [avone, avtwo, img] = await Promise.all([
-        Jimp.read(avoneUrl).catch(() => null),
-        Jimp.read(avtwoUrl).catch(() => null),
-        Jimp.read("https://i.ibb.co/YpR7Bpv/image.jpg").catch(() => null)
+      const senderAvatar = `https://graph.facebook.com/${senderID}/picture?width=512&height=512&access_token=${ACCESS_TOKEN}`;
+      const targetAvatar = `https://graph.facebook.com/${targetID}/picture?width=512&height=512&access_token=${ACCESS_TOKEN}`;
+
+      const bg = backgrounds[Math.floor(Math.random() * backgrounds.length)];
+
+      const [sImg, tImg, bgImg] = await Promise.all([
+        Canvas.loadImage(senderAvatar),
+        Canvas.loadImage(targetAvatar),
+        Canvas.loadImage(bg)
       ]);
 
-      if (!img) {
-        return message.reply("Failed to load background template.");
-      }
+      const canvas = Canvas.createCanvas(713, 420);
+      const ctx = canvas.getContext("2d");
 
-      img.resize({ w: 639, h: 480 });
-      if (avone) {
-        avone.resize({ w: 90, h: 90 }).circle();
-        img.composite(avone, 23, 320);
-      }
-      if (avtwo) {
-        avtwo.resize({ w: 100, h: 100 }).circle();
-        img.composite(avtwo, 110, 60);
-      }
+      ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
 
-      const buf = await img.getBuffer("image/png");
-      const stream = Readable.from(buf);
-      stream.path = "fucked.png";
+      const sP = { x: 94, y: 280, r: 60 };
+      const tP = { x: 180, y: 110, r: 60 };
 
-      message.reply({
-        body: mention.length === 1 ? "「 Harder daddy 🥵💦 」" : "",
-        attachment: stream
-      });
-    } catch (error) {
-      console.error("FAK error:", error);
-      message.reply("Failed to generate the image.");
+      const drawAvatar = (img, pos) => {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y, pos.r, 0, Math.PI * 2);
+        ctx.closePath();
+        ctx.clip();
+        ctx.drawImage(
+          img,
+          pos.x - pos.r,
+          pos.y - pos.r,
+          pos.r * 2,
+          pos.r * 2
+        );
+        ctx.restore();
+      };
+
+      drawAvatar(sImg, sP);
+      drawAvatar(tImg, tP);
+
+      const imgPath = path.join(
+        __dirname,
+        "tmp",
+        `${senderID}_${targetID}.png`
+      );
+
+      await fs.ensureDir(path.dirname(imgPath));
+      fs.writeFileSync(imgPath, canvas.toBuffer());
+
+      message.reply(
+        {
+          body: `${senderName} fucked ${targetName} 🥵🫦`,
+          attachment: fs.createReadStream(imgPath)
+        },
+        () => {
+          fs.unlinkSync(imgPath);
+          api.setMessageReaction("✅", event.messageID, () => {}, true);
+        }
+      );
+
+    } catch (err) {
+      console.error(err);
+      message.reply("❌ | Something went wrong while generating image.");
     }
   }
 };

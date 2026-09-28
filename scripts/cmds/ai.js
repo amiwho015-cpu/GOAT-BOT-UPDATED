@@ -1,94 +1,148 @@
 const axios = require("axios");
 
-const baseApiUrl = async () => {
-        const base = await axios.get("https://raw.githubusercontent.com/mahmudx7/HINATA/main/baseApiUrl.json");
-        return base.data.mahmud;
-};
+const API_CONFIG_URL = "https://raw.githubusercontent.com/goatbotnx/xalmanx210/refs/heads/main/apis.json";
+const API_KEY = "xalman-hub";
+let apiBaseUrl = null;
+let apiConfigRequest = null;
+
+async function getApiBaseUrl() {
+  if (apiBaseUrl) return apiBaseUrl;
+
+  if (!apiConfigRequest) {
+    apiConfigRequest = axios
+      .get(API_CONFIG_URL, { timeout: 15000 })
+      .then(({ data }) => {
+        const baseUrl = data?.[API_KEY];
+
+        if (typeof baseUrl !== "string" || !baseUrl.trim()) {
+          throw new Error(`Missing API key in apis.json: ${API_KEY}`);
+        }
+
+        apiBaseUrl = baseUrl.replace(/\/+$/, "");
+        return apiBaseUrl;
+      })
+      .finally(() => {
+        apiConfigRequest = null;
+      });
+  }
+
+  return apiConfigRequest;
+}
+
+if (!global.deepAiSessions) {
+  global.deepAiSessions = new Map();
+}
+
+async function askDeepAi(prompt, session) {
+  const baseUrl = await getApiBaseUrl();
+
+  const res = await axios.get(`${baseUrl}/api/deepai-chat`, {
+    params: { prompt, session: session || "" },
+    timeout: 60000,
+    validateStatus: () => true
+  });
+
+  const data = res.data;
+  if (!data?.status || !data?.result) {
+    throw new Error(data?.message || "Failed to get a response from DeepAI.");
+  }
+
+  return { result: data.result, session: data.session };
+}
 
 module.exports = {
-        config: {
-                name: "ai",
-                version: "1.7",
-                author: "MahMUD",
-                countDown: 5,
-                role: 0,
-                description: {
-                        bn: "যেকোনো বিষয়ে এআই সহকারীর সাথে চ্যাট করুন",
-                        en: "Chat with an AI assistant on any topic",
-                        vi: "Trò chuyện với trợ lý AI về bất kỳ chủ đề nào"
-                },
-                category: "ai",
-                guide: {
-                        bn: '   {pn} <প্রশ্ন>: আপনার প্রশ্নটি লিখুন',
-                        en: '   {pn} <question>: Type your question',
-                        vi: '   {pn} <câu hỏi>: Nhập câu hỏi của bạn'
-                }
-        },
+  config: {
+    name: "ai",
+    aliases: ["deepai"],
+    version: "2.0",
+    author: "Shihab",
+    countDown: 3,
+    role: 0,
+    shortDescription: { en: "Chat with DeepAI" },
+    longDescription: { en: "Multi-turn chat with DeepAI" },
+    category: "AI",
+    guide: {
+      en: "{p}ai <your prompt> (Reply to continue or reply 'close' to stop)"
+    }
+  },
 
-        langs: {
-                bn: {
-                        noInput: "× বেবি, কিছু তো জিজ্ঞাসা করো!",
-                        error: "× সমস্যা হয়েছে: %1। প্রয়োজনে Contact MahMUD|\n•WhatsApp: 01836298139"
-                },
-                en: {
-                        noInput: "× Baby, please ask something!",
-                        error: "× API error: %1. Contact MahMUD for help.\n•WhatsApp: 01836298139"
-                },
-                vi: {
-                        noInput: "× Cưng ơi, hãy hỏi điều gì đó!",
-                        error: "× Lỗi: %1. Liên hệ MahMUD để hỗ trợ.\n•WhatsApp: 01836298139"
-                }
-        },
+  onStart: async function ({ api, event, args, message }) {
+    const { senderID, messageID } = event;
+    const prompt = args.join(" ");
 
-        onStart: async function ({ api, event, args, message, getLang, commandName }) {
-                const authorName = String.fromCharCode(77, 97, 104, 77, 85, 68);
-                if (this.config.author !== authorName) {
-                        return api.sendMessage("You are not authorized to change the author name.", event.threadID, event.messageID);
-                }
+    if (!prompt) {
+      return message.reply("⚠️ Please provide a prompt or question.");
+    }
 
-                const prompt = args.join(" ");
-                if (!prompt) return message.reply(getLang("noInput"));
+    api.setMessageReaction("⏳", messageID, () => {}, true);
 
-                return module.exports.handleAI({ api, event, prompt, getLang, commandName });
-        },
+    try {
+      const { result, session } = await askDeepAi(prompt, null);
 
-        onReply: async function ({ api, event, Reply, getLang, commandName }) {
-                if (Reply.author !== event.senderID) return;
-                const prompt = event.body;
-                if (!prompt) return;
+      api.setMessageReaction("✅", messageID, () => {}, true);
 
-                return module.exports.handleAI({ api, event, prompt, getLang, commandName });
-        },
+      const sentMsg = await message.reply(`${result}\n\n💡 _Reply to continue or reply 'close' to exit session._`);
 
-        handleAI: async function ({ api, event, prompt, getLang, commandName }) {
-                try {
-                        api.setMessageReaction("⏳", event.messageID, () => {}, true);
-                        
-                        const baseUrl = await baseApiUrl();                   
-                        const response = await axios.get(`${baseUrl}/api/ai`, {
-                                params: {
-                                        prompt: prompt,
-                                        ai: "ai"
-                                }
-                        });
+      global.deepAiSessions.set(senderID, {
+        session,
+        lastMsgID: sentMsg.messageID
+      });
 
-                        const replyText = response.data.response || "No response received.";
-                        api.setMessageReaction("✅", event.messageID, () => {}, true);
+      global.GoatBot.onReply.set(sentMsg.messageID, {
+        commandName: this.config.name,
+        author: senderID,
+        type: "deepai_chat"
+      });
+    } catch (error) {
+      api.setMessageReaction("❌", messageID, () => {}, true);
+      const errMsg = error.response?.data?.message || error.message;
+      return message.reply(`❌ Error: ${errMsg}`);
+    }
+  },
 
-                        return api.sendMessage(replyText, event.threadID, (error, info) => {
-                                if (!error) {
-                                        global.GoatBot.onReply.set(info.messageID, {
-                                                commandName,
-                                                author: event.senderID
-                                        });
-                                }
-                        }, event.messageID);
+  onReply: async function ({ api, event, message, Reply }) {
+    const { senderID, body, messageID } = event;
 
-                } catch (err) {
-                        console.error("AI Error:", err);
-                        api.setMessageReaction("❌", event.messageID, () => {}, true);
-                        const errorMsg = err.response?.data?.error || err.message;
-                        return api.sendMessage(getLang("error", errorMsg), event.threadID, event.messageID);
-                }
-        }
+    if (Reply.author !== senderID) {
+      return message.reply("⚠️ You cannot reply to someone else's conversation.");
+    }
+
+    const sessionData = global.deepAiSessions.get(senderID);
+
+    if (!sessionData) {
+      return message.reply("❌ Session expired or not found. Please start a new chat with `.ai <prompt>`.");
+    }
+
+    const userText = body.trim();
+
+    if (userText.toLowerCase() === "close" || userText.toLowerCase() === "stop") {
+      global.deepAiSessions.delete(senderID);
+      api.setMessageReaction("🔴", messageID, () => {}, true);
+      return message.reply("🛑 Session closed successfully.");
+    }
+
+    api.setMessageReaction("⏳", messageID, () => {}, true);
+
+    try {
+      const { result, session } = await askDeepAi(userText, sessionData.session);
+
+      api.setMessageReaction("✅", messageID, () => {}, true);
+
+      const sentMsg = await message.reply(`${result}\n\n💡 _Reply to continue or reply 'close' to exit._`);
+
+      sessionData.session = session;
+      sessionData.lastMsgID = sentMsg.messageID;
+      global.deepAiSessions.set(senderID, sessionData);
+
+      global.GoatBot.onReply.set(sentMsg.messageID, {
+        commandName: this.config.name,
+        author: senderID,
+        type: "deepai_chat"
+      });
+    } catch (error) {
+      api.setMessageReaction("❌", messageID, () => {}, true);
+      const errMsg = error.response?.data?.message || error.message;
+      return message.reply(`❌ Error: ${errMsg}`);
+    }
+  }
 };

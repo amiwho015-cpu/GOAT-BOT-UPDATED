@@ -1,118 +1,168 @@
-const axios = require("axios");
-
-const mahmud = async () => {
-        const res = await axios.get("https://raw.githubusercontent.com/mahmudx7/HINATA/main/baseApiUrl.json");
-        return res.data.mahmud;
-};
-
 module.exports = {
-        config: {
-                name: "mathgame",
-                aliases: ["math"],
-                version: "1.7",
-                author: "MahMUD",
-                countDown: 10,
-                role: 0,
-                description: {
-                        bn: "মজার গণিত কুইজ খেলে কয়েন এবং এক্সপি জিতুন",
-                        en: "Play fun math quizzes to win coins and exp",
-                        vi: "Chơi đố vui toán học để giành được xu và exp"
-                },
-                category: "game",
-                guide: {
-                        bn: '   {pn}',
-                        en: '   {pn}',
-                        vi: '   {pn}'
-                }
-        },
+  config: {
+    name: "mathgame",
+    aliases: ["math"],
+    version: "6.0",
+    author: "Shihab",
+    role: 0,
+    category: "GAMES"
+  },
 
-        langs: {
-                bn: {
-                        reply: "𝐑𝐞𝐩𝐥𝐲 𝐰𝐢𝐭𝐡 𝐲𝐨𝐮𝐫 𝐚𝐧𝐬𝐰𝐞𝐫.",
-                        correct: "✅ | একদম সঠিক উত্তর বেবি!\n\nতুমি জিতেছো %1 কয়েন এবং %2 এক্সপি।",
-                        wrong: "❌ | উত্তরটি ভুল হয়েছে বেবি!\n\nসঠিক উত্তর ছিল: %1",
-                        notYour: "× বেবি, এটি তোমার কুইজ নয়! নিজের জন্য শুরু করো। >🐸",
-                        error: "× সমস্যা হয়েছে: %1। প্রয়োজনে Contact MahMUD।"
-                },
-                en: {
-                        reply: "𝐑𝐞𝐩𝐥𝐲 𝐰𝐢𝐭𝐡 𝐲𝐨𝐮𝐫 𝐚𝐧𝐬𝐰𝐞𝐫.",
-                        correct: "✅ | Correct answer baby!\n\nYou earned %1 coins & %2 exp.",
-                        wrong: "❌ | Wrong answer baby!\n\nThe correct answer was: %1",
-                        notYour: "𝐓𝐡𝐢𝐬 𝐢𝐬 𝐧𝐨𝐭 𝐲𝐨𝐮𝐫 𝐪𝐮𝐢𝐳 𝐛𝐚𝐛𝐲 >🐸",
-                        error: "× API error: %1. Contact MahMUD for help."
-                },
-                vi: {
-                        reply: "Trả lời bằng đáp án của bạn đi cưng",
-                        correct: "✅ | Đáp án chính xác cưng ơi!\n\nBạn nhận được %1 xu & %2 exp.",
-                        wrong: "❌ | Sai rồi cưng ơi!\n\n💡 Đáp án đúng là: %1",
-                        notYour: "× Đây không phải câu đố của bạn cưng à! >🐸",
-                        error: "× Lỗi: %1. Liên hệ MahMUD để được hỗ trợ."
-                }
-        },
+  onStart: async function ({ event, args, message, usersData }) {
+    const axios = require("axios");
+    const uid = event.senderID;
 
-        onStart: async function ({ api, event, getLang }) {
-                const authorName = String.fromCharCode(77, 97, 104, 77, 85, 68); 
-                if (this.config.author !== authorName) {
-                        return api.sendMessage("You are not authorized to change the author name.", event.threadID, event.messageID);
-                }
-                
-                try {
-                        const apiUrl = await mahmud();
-                        const res = await axios.get(`${apiUrl}/api/math`);
-                        const quiz = res.data?.data || res.data;
+    if (!args[0]) {
+      return message.reply(
+`🧮 MATH GAME GUIDE
+────────────
+📌 Usage:
+➤ /mathgame easy
+➤ /mathgame medium
+➤ /mathgame hard
+➤ /math easy
 
-                        if (!quiz) return api.sendMessage("× No math quiz available baby.", event.threadID, event.messageID);
+🎮 Rules:
+• সঠিক উত্তর: +300 Coins, +100 XP
+• ভুল উত্তর: -100 Coins
 
-                        const { question, correctAnswer, options } = quiz;
-                        const { a, b, c, d } = options;
+⏱ সময়: 60 সেকেন্ড`
+      );
+    }
 
-                        const quizMsg = `\n╭──✦ ${question}\n`
-                                + `├‣ 𝗔) ${a}\n`
-                                + `├‣ 𝗕) ${b}\n`
-                                + `├‣ 𝗖) ${c}\n`
-                                + `├‣ 𝗗) ${d}\n`
-                                + `╰──────────────────‣\n`
-                                + `${getLang("reply")}`;
+    const level = args[0].toLowerCase();
+    if (!["easy", "medium", "hard"].includes(level)) {
+      return message.reply(
+`⚠️ Invalid Level!
 
-                        api.sendMessage(quizMsg, event.threadID, (error, info) => {
-                                global.GoatBot.onReply.set(info.messageID, {
-                                        type: "reply",
-                                        commandName: this.config.name,
-                                        author: event.senderID,
-                                        messageID: info.messageID,
-                                        correctAnswer
-                                });
+✔ Use only:
+• easy
+• medium
+• hard`
+      );
+    }
 
-                                setTimeout(() => {
-                                        api.unsendMessage(info.messageID);
-                                }, 40000);
-                        }, event.messageID);
+    const now = Date.now();
+    const ONE_HOUR = 60 * 60 * 1000;
 
-                } catch (error) {
-                        api.sendMessage(getLang("error", error.message), event.threadID, event.messageID);
-                }
-        },
+    const userData = await usersData.get(uid) || {};
+    let mathHistory = userData.mathHistory || [];
 
-        onReply: async function ({ event, api, Reply, usersData, getLang }) {
-                const { correctAnswer, author } = Reply;
-                if (event.senderID !== author) return api.sendMessage(getLang("notYour"), event.threadID, event.messageID);
+    mathHistory = mathHistory.filter(t => now - t < ONE_HOUR);
 
-                const userReply = event.body.trim().toLowerCase();
-                const userData = await usersData.get(author);
-                const rewardCoins = 500;
-                const rewardExp = 121;
+    if (mathHistory.length >= 30) {
+      const oldest = mathHistory[0];
+      const remainingMs = (oldest + ONE_HOUR) - now;
+      const remainingMin = Math.ceil(remainingMs / 60000);
 
-                await api.unsendMessage(Reply.messageID);
+      return message.reply(
+`⛔ Hourly Limit Reached
+────────────
+🎮 Played: 30 / 30
+⏳ Try again in ${remainingMin} minute(s)`
+      );
+    }
 
-                if (userReply === correctAnswer.toLowerCase()) {
-                        await usersData.set(author, {
-                                money: userData.money + rewardCoins,
-                                exp: userData.exp + rewardExp,
-                                data: userData.data
-                        });
-                        return api.sendMessage(getLang("correct", rewardCoins, rewardExp), event.threadID, event.messageID);
-                } else {
-                        return api.sendMessage(getLang("wrong", correctAnswer), event.threadID, event.messageID);
-                }
-        }
+    mathHistory.push(now);
+    await usersData.set(uid, { ...userData, mathHistory });
+
+    try {
+      const cfg = await axios.get(
+        "https://raw.githubusercontent.com/goatbotnx/Sexy-nx2.0Updated/refs/heads/main/nx-apis.json"
+      );
+
+      const baseUrl = cfg.data.math;
+      const res = await axios.get(`${baseUrl}/api/game?level=${level}`);
+
+      const { question, answer, options } = res.data;
+      const correctIndex = options.indexOf(answer) + 1;
+
+      const optText = options.map((o, i) => ` ${i + 1}. ${o}`).join("\n");
+
+      const quizMsg =
+`🧮 MATH QUIZ (${level.toUpperCase()})
+────────────
+❓ ${question} = ?
+
+${optText}
+
+⏱ Time: 60 seconds
+✏️ Reply 1-4 only`;
+
+      message.reply(quizMsg, (err, info) => {
+        if (err) return;
+
+        const timeout = setTimeout(() => {
+          message.unsend(info.messageID);
+          global.GoatBot.onReply.delete(info.messageID);
+        }, 60 * 1000);
+
+        // ✅ FIXED (Alias + Main name both work)
+        global.GoatBot.onReply.set(info.messageID, {
+          commandName: this.config.name,
+          author: uid,
+          correctIndex,
+          answer,
+          quizMsgID: info.messageID,
+          timeout
+        });
+      });
+
+    } catch (err) {
+      console.error(err);
+      message.reply("⚠️ Failed to load quiz.");
+    }
+  },
+
+  onReply: async function ({ event, Reply, message, usersData }) {
+    if (!Reply) return;
+
+    const { author, correctIndex, answer, quizMsgID, timeout } = Reply;
+
+    if (event.senderID !== author) return;
+
+    clearTimeout(timeout);
+
+    const userReply = event.body.trim();
+    const userData = await usersData.get(author) || {};
+
+    try {
+      await message.unsend(quizMsgID);
+    } catch {}
+
+    try {
+      await message.unsend(event.messageID);
+    } catch {}
+
+    if (userReply == correctIndex) {
+
+      await usersData.set(author, {
+        ...userData,
+        money: (userData.money || 0) + 300,
+        exp: (userData.exp || 0) + 100
+      });
+
+      message.reply(
+`✅ Correct Answer!
+🎯 ${answer}
+💰 +300 Coins
+⭐ +100 XP`
+      );
+
+    } else if (["1","2","3","4"].includes(userReply)) {
+
+      await usersData.set(author, {
+        ...userData,
+        money: Math.max((userData.money || 0) - 100, 0)
+      });
+
+      message.reply(
+`❌ Wrong Answer!
+✔ Correct: ${answer}
+💸 -100 Coins`
+      );
+    }
+
+    global.GoatBot.onReply.delete(quizMsgID);
+  }
 };

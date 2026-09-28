@@ -1,113 +1,254 @@
 const axios = require("axios");
-const fs = require("fs-extra");
+const Canvas = require("canvas");
+const fs = require("fs");
 const path = require("path");
 
-const baseApiUrl = async () => {
-        const base = await axios.get("https://raw.githubusercontent.com/mahmudx7/exe/main/baseApiUrl.json");
-        return base.data.mahmud;
-};
-
 module.exports = {
-        config: {
-                name: "pair2",
-                version: "1.7",
-                author: "MahMUD",
-                countDown: 10,
-                role: 0,
-                description: {
-                        bn: "গ্রুপের মেম্বারদের মধ্যে আপনার পারফেক্ট ম্যাচ খুঁজুন",
-                        en: "Find your perfect match among group members",
-                        vi: "Tìm mảnh ghép hoàn hảo của bạn trong số các thành viên nhóm"
-                },
-                category: "love",
-                guide: {
-                        bn: '   {pn}: আপনার ম্যাচ খুঁজে পেতে ব্যবহার করুন',
-                        en: '   {pn}: Use to find your match',
-                        vi: '   {pn}: Sử dụng để tìm cặp đôi của bạn'
-                }
-        },
+  config: {
+    name: "pair2",
+    version: "3.0",
+    author: "Shihab",
+    role: 0,
+    countDown: 5,
+    shortDescription: "Cute romantic pair system",
+    category: "LOVE"
+  },
 
-        langs: {
-                bn: {
-                        noGender: "× বেবি, আপনার জেন্ডার প্রোফাইলে সেট করা নেই",
-                        noMatch: "× দুঃখিত, এই গ্রুপে আপনার জন্য কোনো ম্যাচ পাওয়া যায়নি",
-                        success: "💞 𝐒𝐮𝐜𝐜𝐞𝐬𝐬𝐟𝐮𝐥 𝐏𝐚𝐢𝐫𝐢𝐧𝐠\n• %1\n• %2\n\n𝐋𝐨𝐯𝐞 𝐏𝐞𝐫𝐜𝐞𝐧𝐭𝐚𝐠𝐞: %3%",
-                        error: "× সমস্যা হয়েছে: %1। প্রয়োজনে Contact MahMUD।"
-                },
-                en: {
-                        noGender: "× Baby, your gender is not defined in your profile",
-                        noMatch: "× Sorry, no match found for you in this group",
-                        success: "💞 𝐒𝐮𝐜𝐜𝐞𝐬𝐬𝐟𝐮𝐥 𝐏𝐚𝐢𝐫𝐢𝐧𝐠\n• %1\n• %2\n\n𝐋𝐨𝐯𝐞 𝐏𝐞𝐫𝐜𝐞𝐧𝐭𝐚𝐠𝐞: %3%",
-                        error: "× API error: %1. Contact MahMUD for help."
-                },
-                vi: {
-                        noGender: "× Cưng ơi, giới tính của cưng không được xác định",
-                        noMatch: "× Rất tiếc, không tìm thấy mảnh ghép nào cho cưng",
-                        success: "💞 𝐆𝐡𝐞́𝐩 đ𝐨̂𝐢 𝐭𝐡𝐚̀𝐧𝐡 𝐜𝐨̂𝐧𝐠\n• %1\n• %2\n\n𝐓𝐲̉ 𝐥𝐞̣̂ 𝐭𝐢̀𝐧𝐡 𝐜𝐚̉𝐦: %3%",
-                        error: "× Lỗi: %1. Liên hệ MahMUD để hỗ trợ."
-                }
-        },
+  onStart: async function ({ api, event, usersData }) {
+    const { threadID, messageID, senderID, messageReply } = event;
 
-        onStart: async function ({ api, event, message, getLang }) {
-                const authorName = String.fromCharCode(77, 97, 104, 77, 85, 68);
-                if (this.config.author !== authorName) {
-                        return api.sendMessage("You are not authorized to change the author name.", event.threadID, event.messageID);
-                }
+    try {
+      let targetID = senderID;
+      let targetName = null;
 
-                const outputPath = path.join(__dirname, "cache", `pair_${event.senderID}_${Date.now()}.png`);
-                if (!fs.existsSync(path.dirname(outputPath))) fs.mkdirSync(path.dirname(outputPath), { recursive: true });
-
-                try {
-                        api.setMessageReaction("😘", event.messageID, () => {}, true);
-
-                        const threadData = await api.getThreadInfo(event.threadID);
-                        const users = threadData.userInfo;
-                        const myData = users.find((u) => u.id === event.senderID);
-
-                        if (!myData || !myData.gender) return message.reply(getLang("noGender"));
-
-                        const myGender = myData.gender.toUpperCase();
-                        let matchCandidates = [];
-
-                        if (myGender === "MALE") {
-                                matchCandidates = users.filter((u) => u.gender === "FEMALE" && u.id !== event.senderID);
-                        } else if (myGender === "FEMALE") {
-                                matchCandidates = users.filter((u) => u.gender === "MALE" && u.id !== event.senderID);
-                        } else {
-                                matchCandidates = users.filter((u) => u.id !== event.senderID);
-                        }
-                        
-                        if (matchCandidates.length === 0) {
-                                api.setMessageReaction("🥺", event.messageID, () => {}, true);
-                                return message.reply(getLang("noMatch"));
-                        }
-
-                        const selectedMatch = matchCandidates[Math.floor(Math.random() * matchCandidates.length)];
-                        const apiUrl = await baseApiUrl();
-                        
-                        const { data } = await axios.get(`${apiUrl}/api/pair/mahmud?user1=${event.senderID}&user2=${selectedMatch.id}&style=2`, { 
-                                responseType: "arraybuffer" 
-                        });
-
-                        fs.writeFileSync(outputPath, Buffer.from(data));
-
-                        const name1 = myData.name || "User";
-                        const name2 = selectedMatch.name || "Partner";
-                        const percentage = Math.floor(Math.random() * 100) + 1;
-
-                        return message.reply({
-                                body: getLang("success", name1, name2, percentage),
-                                attachment: fs.createReadStream(outputPath)
-                        }, () => {
-                                api.setMessageReaction("✅", event.messageID, () => {}, true);
-                                if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
-                        });
-
-                } catch (err) {
-                        console.error("Pair Error:", err);
-                        api.setMessageReaction("❌", event.messageID, () => {}, true);
-                        if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
-                        return message.reply(getLang("error", err.message));
-                }
+      if (messageReply) {
+        targetID = messageReply.senderID;
+        try {
+          const userData = await usersData.get(targetID);
+          targetName = userData.name || "User";
+        } catch {
+          targetName = "User";
         }
+      }
+
+      const loading = await api.sendMessage("💗 | Finding your perfect partner...", threadID);
+
+      const [senderData, threadInfo] = await Promise.all([
+        usersData.get(targetID),
+        api.getThreadInfo(threadID)
+      ]);
+
+      const senderName = targetName || senderData.name || "User";
+      const senderGender = senderData.gender;
+
+      const members = threadInfo.participantIDs.filter(uid => uid != targetID);
+      
+      let targetGender;
+      if (senderGender === 1) {
+        targetGender = 2;
+      } else if (senderGender === 2) {
+        targetGender = 1;
+      } else {
+        targetGender = Math.random() > 0.5 ? 1 : 2;
+      }
+
+      let partnerList = [];
+      const randomMembers = members.sort(() => 0.5 - Math.random());
+
+      for (const uid of randomMembers) {
+        try {
+          const data = await usersData.get(uid);
+          if (data && data.gender === targetGender) {
+            partnerList.push({ id: uid, name: data.name, gender: data.gender });
+          }
+        } catch {}
+      }
+
+      let partner;
+      
+      if (partnerList.length > 0) {
+        partner = partnerList[Math.floor(Math.random() * partnerList.length)];
+      } else {
+        let fallbackPartner = null;
+        
+        for (const uid of randomMembers) {
+          try {
+            const data = await usersData.get(uid);
+            if (data && data.gender !== senderGender && data.gender !== undefined) {
+              fallbackPartner = { id: uid, name: data.name, gender: data.gender };
+              break;
+            }
+          } catch {}
+        }
+        
+        if (fallbackPartner) {
+          partner = fallbackPartner;
+        } else {
+          const fallbackId = randomMembers[Math.floor(Math.random() * randomMembers.length)];
+          partner = {
+            id: fallbackId,
+            name: "Someone Special",
+            gender: targetGender
+          };
+        }
+      }
+
+      if (partner.gender === senderGender && senderGender !== undefined) {
+        for (const uid of randomMembers) {
+          try {
+            const data = await usersData.get(uid);
+            if (data && data.gender !== senderGender && data.gender !== undefined) {
+              partner = { id: uid, name: data.name, gender: data.gender };
+              break;
+            }
+          } catch {}
+        }
+      }
+
+      const match = Math.floor(Math.random() * 31) + 70;
+
+      const canvas = Canvas.createCanvas(1200, 700);
+      const ctx = canvas.getContext("2d");
+
+      const gradient = ctx.createLinearGradient(0, 0, 1200, 700);
+      gradient.addColorStop(0, "#ffe6f2");
+      gradient.addColorStop(1, "#fff0f7");
+
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      for (let i = 0; i < 50; i++) {
+        ctx.font = `${20 + Math.random() * 35}px sans-serif`;
+        ctx.fillStyle = "rgba(255,105,180,0.15)";
+        ctx.fillText("💖", Math.random() * canvas.width, Math.random() * canvas.height);
+      }
+
+      ctx.strokeStyle = "#ffb6d9";
+      ctx.lineWidth = 16;
+      ctx.strokeRect(12, 12, canvas.width - 24, canvas.height - 24);
+
+      ctx.font = "55px sans-serif";
+      for (let i = 0; i < 6; i++) {
+        ctx.fillText("🎀", 80 + i * 190, 65);
+      }
+
+      const token = "6628568379|c1e620fa708a1d5696fb991c1bde5662";
+
+      const avt1 = `https://graph.facebook.com/${targetID}/picture?width=512&height=512&access_token=${token}`;
+      const avt2 = `https://graph.facebook.com/${partner.id}/picture?width=512&height=512&access_token=${token}`;
+
+      async function loadImage(url) {
+        const response = await axios.get(url, {
+          responseType: "arraybuffer",
+          headers: { "User-Agent": "Mozilla/5.0" }
+        });
+        return await Canvas.loadImage(response.data);
+      }
+
+      const [img1, img2] = await Promise.all([loadImage(avt1), loadImage(avt2)]);
+
+      function drawCuteFrame(img, x, y) {
+        const size = 260;
+
+        ctx.shadowColor = "#ff69b4";
+        ctx.shadowBlur = 30;
+
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(x - 14, y - 14, size + 28, size + 28);
+
+        ctx.strokeStyle = "#ff8dc7";
+        ctx.lineWidth = 10;
+        ctx.strokeRect(x - 6, y - 6, size + 12, size + 12);
+
+        ctx.drawImage(img, x, y, size, size);
+
+        ctx.shadowBlur = 0;
+
+        ctx.font = "35px sans-serif";
+
+        ctx.fillText("🎀", x - 18, y - 18);
+        ctx.fillText("🎀", x + size - 5, y - 18);
+
+        ctx.fillText("💖", x - 10, y + size + 28);
+        ctx.fillText("💖", x + size - 5, y + size + 28);
+      }
+
+      drawCuteFrame(img1, 120, 200);
+      drawCuteFrame(img2, 820, 200);
+
+      ctx.font = "130px sans-serif";
+      ctx.fillText("💗", 515, 355);
+
+      ctx.textAlign = "center";
+      ctx.fillStyle = "#ff1493";
+      ctx.font = "bold 48px Sans";
+      ctx.fillText(`${match}% MATCH`, 600, 520);
+
+      ctx.fillStyle = "#d63384";
+      ctx.font = "bold 32px Sans";
+      
+      let displayName1 = senderName;
+      let displayName2 = partner.name;
+      
+      if (displayName1.length > 15) {
+        displayName1 = displayName1.substring(0, 15) + "...";
+      }
+      if (displayName2.length > 15) {
+        displayName2 = displayName2.substring(0, 15) + "...";
+      }
+      
+      ctx.fillText(displayName1, 250, 585);
+      ctx.fillText(displayName2, 950, 585);
+
+      ctx.font = "28px Sans";
+      ctx.fillStyle = "#ff69b4";
+      ctx.fillText("Made with Love 💕", 600, 650);
+
+      const cacheDir = path.join(__dirname, "cache");
+      if (!fs.existsSync(cacheDir)) {
+        fs.mkdirSync(cacheDir, { recursive: true });
+      }
+
+      const filePath = path.join(cacheDir, `pair_${Date.now()}.png`);
+      fs.writeFileSync(filePath, canvas.toBuffer());
+
+      if (loading && loading.messageID) {
+        try {
+          await api.unsendMessage(loading.messageID, threadID);
+        } catch {}
+      }
+
+      const emoji = match > 85 ? "💞" : match > 75 ? "💗" : "💕";
+      const compatibility = match > 85 ? "Perfect" : match > 75 ? "Great" : "Good";
+      
+      const genderEmoji1 = senderGender === 1 ? "👦" : senderGender === 2 ? "👧" : "👤";
+      const genderEmoji2 = partner.gender === 1 ? "👦" : partner.gender === 2 ? "👧" : "👤";
+
+      const msg = `${emoji} 𝗣𝗘𝗥𝗙𝗘𝗖𝗧 𝗣𝗔𝗜𝗥
+
+${genderEmoji1} ${senderName} ✦ ${genderEmoji2} ${partner.name}
+📊 ${match}% ${compatibility} Match
+💘 Status: Matched!`;
+
+      return api.sendMessage(
+        {
+          body: msg,
+          attachment: fs.createReadStream(filePath)
+        },
+        threadID,
+        () => {
+          if (fs.existsSync(filePath)) {
+            try {
+              fs.unlinkSync(filePath);
+            } catch {}
+          }
+        },
+        messageID
+      );
+
+    } catch (err) {
+      console.log(err);
+      return api.sendMessage("❌ | Pair system failed!", threadID, messageID);
+    }
+  }
 };

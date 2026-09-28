@@ -1,63 +1,107 @@
 const axios = require("axios");
-const fs = require("fs");
-const path = require("path");
 
-const mahmud = async () => {
-  const response = await axios.get("https://raw.githubusercontent.com/mahmudx7/HINATA/main/baseApiUrl.json");
-  return response.data.mahmud;
-};
+const API_CONFIG_URL = "https://raw.githubusercontent.com/goatbotnx/xalmanx210/refs/heads/main/apis.json";
+const API_KEY = "xalman-hub";
+let apiBaseUrl = null;
+let apiConfigRequest = null;
+
+async function getApiBaseUrl() {
+  if (apiBaseUrl) return apiBaseUrl;
+
+  if (!apiConfigRequest) {
+    apiConfigRequest = axios
+      .get(API_CONFIG_URL, { timeout: 15000 })
+      .then(({ data }) => {
+        const baseUrl = data?.[API_KEY];
+
+        if (typeof baseUrl !== "string" || !baseUrl.trim()) {
+          throw new Error(`Missing API key in apis.json: ${API_KEY}`);
+        }
+
+        apiBaseUrl = baseUrl.replace(/\/+$/, "");
+        return apiBaseUrl;
+      })
+      .finally(() => {
+        apiConfigRequest = null;
+      });
+  }
+
+  return apiConfigRequest;
+}
+const fs = require("fs-extra");
+const path = require("path");
 
 module.exports = {
   config: {
-    name: "memevideo",
-    aliases: ["memevid"],
-    version: "1.7",
+    name: "memevid",
+    aliases: ["memevideo"],
+    version: "3.0",
+    author: "Shihab",
+    countDown: 5,
     role: 0,
-    author: "MahMUD",
-    category: "fun",
-    guide: {
-      en: "Use {pn} to get a random meme video."
-    }
+    description: "Get a random meme video with auto-retry",
+    category: "MEDIA",
+    guide: "{pn}"
   },
 
-  onStart: async function ({ api, event }) {
-    const obfuscatedAuthor = String.fromCharCode(77, 97, 104, 77, 85, 68); 
-    if (module.exports.config.author !== obfuscatedAuthor) {
-      return api.sendMessage("You are not authorized to change the author name.", event.threadID, event.messageID);
-    }
-    
-    try {
-      const apiUrl = await mahmud();
-      const res = await axios.get(`${apiUrl}/api/album/videos/meme?userID=${event.senderID}`);
-      if (!res.data.success || !res.data.videos.length)
-        return api.sendMessage("❌ | No videos found.", event.threadID, event.messageID);
+  onStart: async function ({ api, event, message }) {
+    const { messageID, threadID } = event;
+    const CACHE_DIR = path.join(__dirname, "cache");
+    const MAX_RETRIES = 3;
+    const xalman_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
-      const url = res.data.videos[Math.floor(Math.random() * res.data.videos.length)];
-      const filePath = path.join(__dirname, "temp_video.mp4");
+    api.setMessageReaction("⏳", messageID, () => {}, true);
 
-      const video = await axios({
-        url,
-        method: "GET",
-        responseType: "stream",
-        headers: { 'User-Agent': 'Mozilla/5.0' }
-      });
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const res = await axios.get(`${await getApiBaseUrl()}/api/memevid`, { timeout: 10000 });
+        const videoUrl = res.data.url;
 
-      const writer = fs.createWriteStream(filePath);
-      video.data.pipe(writer);
+        if (!videoUrl) {
+          throw new Error("No video URL found");
+        }
 
-      writer.on("finish", () => {
-        api.sendMessage({
-          body: "𝐇𝐞𝐫𝐞'𝐬 𝐲𝐨𝐮𝐫 meme 𝐯𝐢𝐝𝐞𝐨 <🐸",
+        if (!fs.existsSync(CACHE_DIR)) fs.mkdirSync(CACHE_DIR, { recursive: true });
+
+        const filePath = path.join(CACHE_DIR, `meme_${Date.now()}.mp4`);
+
+        const response = await axios({
+          method: 'get',
+          url: videoUrl,
+          headers: { "User-Agent": xalman_UA },
+          responseType: 'stream',
+          timeout: 20000
+        });
+
+        const writer = fs.createWriteStream(filePath);
+        response.data.pipe(writer);
+
+        await new Promise((resolve, reject) => {
+          writer.on('finish', resolve);
+          writer.on('error', reject);
+        });
+
+        api.setMessageReaction("✅", messageID, () => {}, true);
+
+        const msg = `🎬 𝗠𝗘𝗠𝗘 𝗩𝗜𝗗𝗘𝗢\n━━━━━━━━━━━━━━━━━━\nHere is your meme! 😙`;
+
+        return api.sendMessage({
+          body: msg,
           attachment: fs.createReadStream(filePath)
-        }, event.threadID, () => fs.unlinkSync(filePath), event.messageID);
-      });
+        }, threadID, () => {
+          if (fs.existsSync(filePath)) {
+            try { fs.unlinkSync(filePath); } catch (e) {}
+          }
+        });
 
-      writer.on("error", () => {
-        api.sendMessage("❌ | Download error.", event.threadID, event.messageID);
-      });
-    } catch (e) {
-      console.error("ERROR:", e);
-      api.sendMessage("🥹error, contact MahMUD.", event.threadID, event.messageID);
+      } catch (error) {
+        console.error(`Attempt ${attempt} failed:`, error.message);
+        if (attempt === MAX_RETRIES) {
+          api.setMessageReaction("❌", messageID, () => {}, true);
+          return message.reply(`❌ Failed after ${MAX_RETRIES} attempts. Please try again later.`);
+        }
+        await new Promise(resolve => setTimeout(resolve, 2000 * attempt));
+      }
     }
   }
 };

@@ -1,98 +1,114 @@
 const axios = require("axios");
 
-const mahmud = async () => {
-        const base = await axios.get("https://raw.githubusercontent.com/mahmudx7/HINATA/main/baseApiUrl.json");
-        return base.data.mahmud;
-};
+const API_CONFIG_URL = "https://raw.githubusercontent.com/goatbotnx/xalmanx210/refs/heads/main/apis.json";
+const API_KEY = "xalman-hub";
+let apiBaseUrl = null;
+let apiConfigRequest = null;
+
+async function getApiBaseUrl() {
+  if (apiBaseUrl) return apiBaseUrl;
+
+  if (!apiConfigRequest) {
+    apiConfigRequest = axios
+      .get(API_CONFIG_URL, { timeout: 15000 })
+      .then(({ data }) => {
+        const baseUrl = data?.[API_KEY];
+
+        if (typeof baseUrl !== "string" || !baseUrl.trim()) {
+          throw new Error(`Missing API key in apis.json: ${API_KEY}`);
+        }
+
+        apiBaseUrl = baseUrl.replace(/\/+$/, "");
+        return apiBaseUrl;
+      })
+      .finally(() => {
+        apiConfigRequest = null;
+      });
+  }
+
+  return apiConfigRequest;
+}
 
 module.exports = {
-        config: {
-                name: "cdp",
-                version: "1.7",
-                author: "MahMUD",
-                countDown: 5,
-                role: 0,
-                description: {
-                        bn: "র‍্যান্ডম কাপল ডিপি এবং ছবি পান",
-                        en: "Get random couple profile pictures",
-                        vi: "Lấy ảnh đại diện đôi ngẫu nhiên"
-                },
-                category: "love",
-                guide: {
-                        bn: '   {pn}: র‍্যান্ডম কাপল ডিপি পান'
-                                + '\n   {pn} list: মোট কতগুলো ডিপি আছে দেখুন',
-                        en: '   {pn}: Get a random couple DP'
-                                + '\n   {pn} list: Check total available DPs',
-                        vi: '   {pn}: Nhận ảnh đại diện đôi ngẫu nhiên'
-                                + '\n   {pn} list: Kiểm tra tổng số ảnh có sẵn'
-                }
-        },
+  config: {
+    name: "coupledp",
+    aliases: ["cdp"],
+    version: "5.5",
+    author: "Shihab",
+    description: "Random Matching Couple DP with auto-retry and list system",
+    category: "LOVE",
+    cooldown: 5,
+    guide: {
+      en: "   {pn} - Get a random matching couple DP\n   {pn} list - Show total number of available couple DPs"
+    }
+  },
 
-        langs: {
-                bn: {
-                        total: "🎀 মোট কাপল ডিপি সংখ্যা: %1",
-                        noData: "× কোনো ডিপি খুঁজে পাওয়া যায়নি!",
-                        success: "🎀 | এই নাও তোমাদের ডিপি বেবি <😘",
-                        error: "× সমস্যা হয়েছে: %1। প্রয়োজনে Contact MahMUD।"
-                },
-                en: {
-                        total: "🎀 Total Couple DPs: %1",
-                        noData: "× No Couple DP found.",
-                        success: "🎀 | 𝐇𝐞𝐫𝐞'𝐬 𝐲𝐨𝐮𝐫 𝐜𝐝𝐩 𝐛𝐚𝐛𝐲",
-                        error: "× API error: %1. Contact MahMUD for help."
-                },
-                vi: {
-                        total: "🎀 Tổng số ảnh đôi: %1",
-                        noData: "× Không tìm thấy ảnh đôi nào.",
-                        success: "🎀 | Ảnh đôi của các cưng đây <😘",
-                        error: "× Lỗi: %1. Liên hệ MahMUD để hỗ trợ."
-                }
-        },
+  onStart: async function ({ api, event, args }) {
+    const { threadID, messageID, senderID } = event;
+    const API_URL = `${await getApiBaseUrl()}/api/cdp`;
 
-        onStart: async function ({ api, event, args, message, getLang }) {
-                const authorName = String.fromCharCode(77, 97, 104, 77, 85, 68);
-                if (this.config.author !== authorName) {
-                        return api.sendMessage("You are not authorized to change the author name.", event.threadID, event.messageID);
-                }
-
-                try {
-                        const baseURL = await mahmud();
-
-                        // List logic
-                        if (args[0] === "list") {
-                                const res = await axios.get(`${baseURL}/api/cdp/list`);
-                                return message.reply(getLang("total", res.data.total));
-                        }
-
-                        // Get CDP logic
-                        const res = await axios.get(`${baseURL}/api/cdp`);
-                        const { boy, girl } = res.data;
-
-                        if (!boy || !girl) return message.reply(getLang("noData"));
-
-                        const getStream = async (url) => {
-                                const response = await axios({
-                                        method: "GET",
-                                        url,
-                                        responseType: "stream",
-                                        headers: { 'User-Agent': 'Mozilla/5.0' }
-                                });
-                                return response.data;
-                        };
-
-                        const attachments = [
-                                await getStream(boy),
-                                await getStream(girl)
-                        ];
-
-                        return message.reply({
-                                body: getLang("success"),
-                                attachment: attachments
-                        });
-
-                } catch (err) {
-                        console.error("CDP Error:", err);
-                        return message.reply(getLang("error", err.message));
-                }
+    if (args[0] && args[0].toLowerCase() === "list") {
+      try {
+        const res = await axios.get(`${API_URL}?type=list`, { timeout: 8000 });
+        if (res.data && res.data.status && res.data.total_cdp !== undefined) {
+          const msg = `❖ 𝐓𝐨𝐭𝐚𝐥 𝐂𝐎𝐔𝐏𝐋𝐄 𝐃𝐏 ❖\n━━━━━━━━━━━━━━━━━━\n> ${res.data.total_cdp}`;
+          return api.sendMessage(msg, threadID, messageID);
+        } else {
+          throw new Error("Invalid response from API");
         }
+      } catch (err) {
+        console.error("Error fetching CDP list:", err.message);
+        return api.sendMessage("❌ Failed to fetch CDP list. Please try again.", threadID, messageID);
+      }
+    }
+
+    const MAX_RETRIES = 3;
+    let attempt = 0;
+    let success = false;
+
+    api.setMessageReaction("⏳", messageID, () => {}, true);
+
+    while (attempt < MAX_RETRIES && !success) {
+      attempt++;
+      try {
+        const res = await axios.get(API_URL, { timeout: 10000 });
+        const pair = res.data.pair;
+
+        if (!pair || !pair.boy || !pair.girl) throw new Error("Invalid data from API");
+
+        const getStream = async (url) => {
+          const response = await axios.get(url, {
+            responseType: "stream",
+            timeout: 15000,
+            headers: {
+              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36",
+              "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+              "Referer": "https://imgur.com/"
+            }
+          });
+          return response.data;
+        };
+
+        const boyStream = await getStream(pair.boy);
+        const girlStream = await getStream(pair.girl);
+
+        await api.sendMessage({
+          body: "❖ 𝐌𝐀𝐓𝐂𝐇𝐈𝐍𝐆 𝐂𝐎𝐔𝐏𝐋𝐄 𝐃𝐏 ❖\n━━━━━━━━━━━━━━━━━━\n",
+          attachment: [boyStream, girlStream]
+        }, threadID);
+
+        api.setMessageReaction("✅", messageID, () => {}, true);
+        success = true;
+        break;
+
+      } catch (err) {
+        console.error(`Attempt ${attempt} failed:`, err.message);
+        if (attempt === MAX_RETRIES) {
+          api.setMessageReaction("❌", messageID, () => {}, true);
+          return api.sendMessage(`✕ Failed after ${MAX_RETRIES} attempts. Please try again later.`, threadID, messageID);
+        }
+        await new Promise(resolve => setTimeout(resolve, 2000 * attempt));
+      }
+    }
+  }
 };

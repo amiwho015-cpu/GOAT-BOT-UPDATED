@@ -1,82 +1,79 @@
 const axios = require("axios");
 
-const mahmud = async () => {
-        const base = await axios.get("https://raw.githubusercontent.com/mahmudx7/HINATA/main/baseApiUrl.json");
-        return base.data.mahmud;
-};
+const API_CONFIG_URL = "https://raw.githubusercontent.com/goatbotnx/xalmanx210/refs/heads/main/apis.json";
+const API_KEY = "xalman-hub";
+let apiBaseUrl = null;
+let apiConfigRequest = null;
+
+async function getApiBaseUrl() {
+  if (apiBaseUrl) return apiBaseUrl;
+
+  if (!apiConfigRequest) {
+    apiConfigRequest = axios
+      .get(API_CONFIG_URL, { timeout: 15000 })
+      .then(({ data }) => {
+        const baseUrl = data?.[API_KEY];
+
+        if (typeof baseUrl !== "string" || !baseUrl.trim()) {
+          throw new Error(`Missing API key in apis.json: ${API_KEY}`);
+        }
+
+        apiBaseUrl = baseUrl.replace(/\/+$/, "");
+        return apiBaseUrl;
+      })
+      .finally(() => {
+        apiConfigRequest = null;
+      });
+  }
+
+  return apiConfigRequest;
+}
 
 module.exports = {
-        config: {
-                name: "meme",
-                aliases: ["memes", "মিম"],
-                version: "1.7",
-                author: "MahMUD",
-                countDown: 10,
-                role: 0,
-                description: {
-                        bn: "র‍্যান্ডম মজার মিম ইমেজ পান",
-                        en: "Get random funny meme images",
-                        vi: "Lấy hình ảnh meme vui nhộn ngẫu nhiên"
-                },
-                category: "fun",
-                guide: {
-                        bn: '   {pn}: একটি র‍্যান্ডম মিম দেখতে ব্যবহার করুন',
-                        en: '   {pn}: Use to get a random meme',
-                        vi: '   {pn}: Sử dụng để lấy một meme ngẫu nhiên'
-                }
-        },
+  config: {
+    name: "meme",
+    aliases: ["randommeme"],
+    version: "3.0",
+    author: "Shihab",
+    countDown: 5,
+    role: 0,
+    shortDescription: "Get random memes or check total count",
+    category: "FUN & SOCIAL",
+    guide: "{pn} or {pn} list"
+  },
 
-        langs: {
-                bn: {
-                        noResult: "× কোনো মিম খুঁজে পাওয়া যায়নি!",
-                        success: "🐸 | 𝐇𝐞𝐫𝐞'𝐬 𝐲𝐨𝐮𝐫 𝐫𝐚𝐧𝐝𝐨𝐦 𝐦𝐞𝐦𝐞 𝐛𝐚𝐛y",
-                        error: "× সমস্যা হয়েছে: %1। প্রয়োজনে Contact MahMUD।\n•WhatsApp: 01836298139"
-                },
-                en: {
-                        noResult: "× Could not fetch meme!",
-                        success: "🐸 | 𝐇𝐞𝐫𝐞'𝐬 𝐲𝐨𝐮𝐫 𝐫𝐚𝐧𝐝𝐨𝐦 𝐦𝐞𝐦𝐞 𝐛𝐚𝐛𝐲",
-                        error: "× API error: %1. Contact MahMUD for help.\n•WhatsApp: 01836298139"
-                },
-                vi: {
-                        noResult: "× Không tìm thấy meme nào!",
-                        success: "🐸 | Meme của cưng đây",
-                        error: "× Lỗi: %1. Liên hệ MahMUD để hỗ trợ.\n•WhatsApp: 01836298139"
-                }
-        },
+  onStart: async function ({ api, event, args }) {
+    const { threadID, messageID } = event;
+    const BASE_URL = `${await getApiBaseUrl()}/api/meme`;
 
-        onStart: async function ({ api, event, message, getLang }) {
-                const authorName = String.fromCharCode(77, 97, 104, 77, 85, 68);
-                if (this.config.author !== authorName) {
-                        return api.sendMessage("You are not authorized to change the author name.", event.threadID, event.messageID);
-                }
-
-                try {
-                        api.setMessageReaction("⏳", event.messageID, () => {}, true);
-                        
-                        const apiUrlBase = await mahmud();
-                        const res = await axios.get(`${apiUrlBase}/api/meme`);
-                        const imageUrl = res.data?.imageUrl;
-
-                        if (!imageUrl) return message.reply(getLang("noResult"));
-
-                        const stream = await axios({
-                                method: "GET",
-                                url: imageUrl,
-                                responseType: "stream",
-                                headers: { 'User-Agent': 'Mozilla/5.0' }
-                        });
-
-                        return message.reply({
-                                body: getLang("success"),
-                                attachment: stream.data
-                        }, () => {
-                                api.setMessageReaction("✅", event.messageID, () => {}, true);
-                        });
-
-                } catch (err) {
-                        console.error("Meme Error:", err);
-                        api.setMessageReaction("❌", event.messageID, () => {}, true);
-                        return message.reply(getLang("error", err.message));
-                }
+    if (args[0] === "list") {
+      api.setMessageReaction("📊", messageID, () => {}, true);
+      try {
+        const res = await axios.get(`${BASE_URL}/list`);
+        if (res.data.status === true) {
+          const total = res.data.total;
+          api.setMessageReaction("✅", messageID, () => {}, true);
+          return api.sendMessage(`❖ 𝗠𝗘𝗠𝗘 𝗜𝗡𝗙𝗢 ❖\n━━━━━━━━━━━━━━━━━━\n📊 Total Memes: ${total}\n━━━━━━━━━━━━━━━━━━`, threadID, messageID);
         }
+      } catch (err) {
+        api.setMessageReaction("❌", messageID, () => {}, true);
+        return api.sendMessage("✕ Failed to fetch meme list!", threadID, messageID);
+      }
+    }
+
+    api.setMessageReaction("🐧", messageID, () => {}, true);
+    try {
+      const response = await axios.get(BASE_URL, { responseType: 'stream' });
+      
+      api.setMessageReaction("✅", messageID, () => {}, true);
+      return api.sendMessage({
+        body: "❖ 𝗥𝗔𝗡𝗗𝗢𝗠 𝗠𝗘𝗠𝗘 ❖\n━━━━━━━━━━━━━━━━━━",
+        attachment: response.data
+      }, threadID, messageID);
+
+    } catch (error) {
+      api.setMessageReaction("❌", messageID, () => {}, true);
+      return api.sendMessage("✕ Failed to fetch meme!", threadID, messageID);
+    }
+  }
 };

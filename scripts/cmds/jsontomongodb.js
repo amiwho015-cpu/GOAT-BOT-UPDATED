@@ -5,7 +5,7 @@ module.exports = {
 		name: "jsontomongodb",
 		aliases: ["jsontomongo"],
 		version: "1.5",
-		author: "NtKhang",
+		author: "Shihab",
 		countDown: 5,
 		role: 2,
 		description: {
@@ -14,8 +14,8 @@ module.exports = {
 		},
 		category: "owner",
 		guide: {
-			vi: "   {pn} <thread | user | dashboard | global | all>: Sẽ đồng bộ dữ liệu từ data json được lưu trong thư mục database/data sang mongodb\n\n   Lưu ý: Nếu dữ liệu đã tồn tại trong mongodb thì sẽ được cập nhật lại",
-			en: "   {pn} <thread | user | dashboard | global | all>: Will synchronize data from json data stored in the database/data folder to mongodb\n\n   Note: If the data already exists in mongodb, it will be updated"
+			vi: " {pn} <thread | user | dashboard | global | all>: Sẽ đồng bộ dữ liệu từ data json được lưu trong thư mục database/data sang mongodb\n\n Lưu ý: Nếu dữ liệu đã tồn tại trong mongodb thì sẽ được cập nhật lại",
+			en: " {pn} <thread | user | dashboard | global | all>: Will synchronize data from json data stored in the database/data folder to mongodb\n\n Note: If the data already exists in mongodb, it will be updated"
 		}
 	},
 

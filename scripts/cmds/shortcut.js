@@ -3,16 +3,15 @@ const { getExtFromUrl, drive, getStreamFromURL } = global.utils;
 module.exports = {
 	config: {
 		name: 'shortcut',
-		aliases: ['short'],
 		version: '1.14',
-		author: 'NTKhang',
+		author: "Shihab",
 		countDown: 5,
 		role: 0,
 		description: {
 			vi: 'Thêm một phím tắt cho tin nhắn trong nhóm chat của bạn',
 			en: 'Add a shortcut for your message in group chat'
 		},
-		category: 'custom',
+		category: 'box chat',
 		guide: {
 			vi: '   {pn} add <word> => <content>: thêm một phím tắt cho bạn (có thể gửi kèm hoặc phản hồi một tin nhắn có file để thêm tệp đính kèm)'
 				+ '\n   Ví dụ:\n    {pn} add hi => Xin chào mọi người'

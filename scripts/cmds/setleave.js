@@ -5,14 +5,14 @@ module.exports = {
 		name: "setleave",
 		aliases: ["setl"],
 		version: "1.7",
-		author: "NtKhang",
+		author: "Shihab",
 		countDown: 5,
 		role: 0,
 		description: {
 			vi: "Chỉnh sửa nội dung/bật/tắt tin nhắn tạm biệt thành viên rời khỏi nhóm chat của bạn",
 			en: "Edit content/turn on/off leave message when member leave your group chat"
 		},
-		category: "custom",
+		category: "box chat",
 		guide: {
 			vi: {
 				body: "   {pn} on: Bật tin nhắn tạm biệt"

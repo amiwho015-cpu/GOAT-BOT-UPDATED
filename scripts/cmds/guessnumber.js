@@ -23,14 +23,14 @@ module.exports = {
 		name: "guessnumber",
 		aliases: ["guessnum"],
 		version: "1.1",
-		author: "NTKhang",
+		author: "Shihab",
 		countDown: 5,
 		role: 0,
 		description: {
 			vi: "Game đoán số",
 			en: "Guess number game"
 		},
-		category: "game",
+		category: "GAMES",
 		guide: {
 			vi: "  {pn} [4 | 5 | 6] [single | multi]: tạo một bàn chơi mới, với:"
 				+ "\n    4 5 6 là số chữ số của số cần đoán, mặc định là 4."

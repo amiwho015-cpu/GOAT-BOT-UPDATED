@@ -1,32 +1,108 @@
 const axios = require("axios");
 
+const API_CONFIG_URL = "https://raw.githubusercontent.com/goatbotnx/xalmanx210/refs/heads/main/apis.json";
+const API_KEY = "xalman-hub";
+let apiBaseUrl = null;
+let apiConfigRequest = null;
+
+async function getApiBaseUrl() {
+  if (apiBaseUrl) return apiBaseUrl;
+
+  if (!apiConfigRequest) {
+    apiConfigRequest = axios
+      .get(API_CONFIG_URL, { timeout: 15000 })
+      .then(({ data }) => {
+        const baseUrl = data?.[API_KEY];
+
+        if (typeof baseUrl !== "string" || !baseUrl.trim()) {
+          throw new Error(`Missing API key in apis.json: ${API_KEY}`);
+        }
+
+        apiBaseUrl = baseUrl.replace(/\/+$/, "");
+        return apiBaseUrl;
+      })
+      .finally(() => {
+        apiConfigRequest = null;
+      });
+  }
+
+  return apiConfigRequest;
+}
+
 module.exports = {
   config: {
     name: "prompt",
-    aliases: ["p"],
-    version: "0.0.5",
+    aliases: ["imgprompt", "p"],
+    version: "4.0",
+    author: "Shihab",
+    countDown: 5,
     role: 0,
-    author: "Azadx69x",
-    category: "ai",
-    cooldowns: 3,
-    guide: { en: "Reply to an image to generate an AI prompt" }
+    shortDescription: "Generate prompt from image",
+    longDescription: "Generate an AI prompt from a replied image",
+    category: "AI",
+    guide: "{pn} (reply to an image)"
   },
-  onStart: async ({ api, event }) => {
-    const { threadID, messageID, messageReply } = event;
-    const attachment = messageReply?.attachments?.[0] || event.attachments?.[0];
-    const img = attachment?.url || attachment?.previewUrl || attachment?.largePreviewUrl;
-    if (!img) return api.sendMessage("⚠️ Reply to an image.", threadID, messageID);
-    try { api.setMessageReaction("⏳", messageID, () => {}, true); } catch {}
+
+  onStart: async function ({ api, event }) {
+    const { threadID, messageID, type, messageReply } = event;
+
+    if (type !== "message_reply" || !messageReply?.attachments?.length) {
+      return api.sendMessage(
+        "❌ Please reply to an image to generate a prompt.",
+        threadID,
+        messageID
+      );
+    }
+
+    const attachment = messageReply.attachments.find(
+      item => item?.type === "photo" && item?.url
+    );
+
+    if (!attachment) {
+      return api.sendMessage(
+        "❌ Please reply to a valid image.",
+        threadID,
+        messageID
+      );
+    }
+
+    api.setMessageReaction("🔍", messageID, () => {}, true);
+
     try {
-      const res = await axios.get(`https://azadx69x.is-a.dev/api/prompt?url=${encodeURIComponent(img)}`);
-      const prompt = res.data?.data?.data?.prompt || res.data?.data?.prompt || res.data?.prompt;
-      if (!prompt) throw new Error("No prompt found.");
-      await api.sendMessage(`🐦 Generated Prompt:\n\n${prompt}`, threadID, messageID);
-      try { api.setMessageReaction("✅", messageID, () => {}, true); } catch {}
-    } catch (e) {
-      try { api.setMessageReaction("❌", messageID, () => {}, true); } catch {}
-      const error = e.response?.data?.error || e.response?.data?.message || e.message || "Error generating prompt.";
-      await api.sendMessage(error, threadID, messageID);
+      const response = await axios.get(
+        `${await getApiBaseUrl()}/api/prompt`,
+        {
+          params: { url: attachment.url },
+          timeout: 120000
+        }
+      );
+
+      const data = response?.data;
+
+      if (!data?.status || !data?.prompt) {
+        throw new Error(data?.error || data?.message || "Prompt not found");
+      }
+
+      const prompt = String(data.prompt)
+        .replace(/\\n/g, " ")
+        .replace(/\r?\n|\r/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+      api.setMessageReaction("✅", messageID, () => {}, true);
+
+      const msg = `🖼️ 𝗜𝗠𝗔𝗚𝗘 𝗣𝗥𝗢𝗠𝗣𝗧\n━━━━━━━━━━━━━━━━━━\n${prompt}`;
+
+      return api.sendMessage(msg, threadID, messageID);
+
+    } catch (error) {
+      console.error("Prompt Error:", error.message);
+      api.setMessageReaction("❌", messageID, () => {}, true);
+      return api.sendMessage(
+        "❌ Failed to analyze the image. Please try again.",
+        threadID,
+        messageID
+      );
     }
   }
 };

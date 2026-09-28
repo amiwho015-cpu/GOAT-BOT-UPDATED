@@ -1,133 +1,133 @@
-const axios = require("axios");
-const fs = require("fs-extra");
-const path = require("path");
+const axios = require('axios');
 
-const baseApiUrl = async () => {
-        const base = await axios.get("https://raw.githubusercontent.com/mahmudx7/HINATA/main/baseApiUrl.json");
-        return base.data.mahmud;
-};
+const API_CONFIG_URL = "https://raw.githubusercontent.com/goatbotnx/xalmanx210/refs/heads/main/apis.json";
+const API_KEY = "xalman-hub";
+let apiBaseUrl = null;
+let apiConfigRequest = null;
+
+async function getApiBaseUrl() {
+  if (apiBaseUrl) return apiBaseUrl;
+
+  if (!apiConfigRequest) {
+    apiConfigRequest = axios
+      .get(API_CONFIG_URL, { timeout: 15000 })
+      .then(({ data }) => {
+        const baseUrl = data?.[API_KEY];
+
+        if (typeof baseUrl !== "string" || !baseUrl.trim()) {
+          throw new Error(`Missing API key in apis.json: ${API_KEY}`);
+        }
+
+        apiBaseUrl = baseUrl.replace(/\/+$/, "");
+        return apiBaseUrl;
+      })
+      .finally(() => {
+        apiConfigRequest = null;
+      });
+  }
+
+  return apiConfigRequest;
+}
+const fs = require('fs-extra');
+const path = require('path');
+const { createCanvas, loadImage } = require('canvas');
 
 module.exports = {
-        config: {
-                name: "art",
-                aliases: ["artify", "photoart"],
-                version: "1.7",
-                author: "MahMUD", // credit Change dile thapramu kintu.
-                countDown: 10,
-                role: 0,
-                description: {
-                        en: "Transform your photo into various art styles",
-                        bn: "আপনার ছবিকে বিভিন্ন আর্ট স্টাইলে রূপান্তর করুন",
-                        vi: "Chuyển đổi ảnh của bạn thành nhiều phong cách nghệ thuật khác nhau"
-                },
-                category: "Image gen",
-                guide: {
-                        en: "{pn} [1-100] Reply to a photo or {pn} list",
-                        bn: "{pn} [১-১০০] ছবিতে রিপ্লাই দিন) অথবা {pn} list",
-                        vi: "{pn} [1-100] Phản hồi một ảnh hoặc {pn} list"
-                }
-        },
+    config: {
+        name: "art",
+        aliases: ["artx"],
+        version: "3.0",
+        author: "Shihab",
+        countDown: 3,
+        role: 0,
+        shortDescription: "Generate 4 AI images in one grid",
+        longDescription: "Generate 4 images, combine them into a grid, and reply with 1-4 to get the full image.",
+        category: "AI",
+        guide: "{pn} [your prompt]"
+    },
 
-        langs: {
-                bn: {
-                        list_header: "✅ | 𝐀𝐯𝐚𝐢𝐥𝐚𝐛𝐥𝐞 𝐀𝐫𝐭 𝐒𝐭𝐲𝐥𝐞𝐬 𝐋𝐢𝐬𝐭:\n\n",
-                        no_image: "• Baby, অনুগ্রহ করে একটি ছবিতে রিপ্লাই দিন।",
-                        invalid_style: "❌ স্টাইল নম্বর অবশ্যই ১ থেকে ১০০ এর মধ্যে হতে হবে।",
-                        generating: "🔄 | Applying art, please wait...\n• Style: %1\n• Style name: %2",
-                        error: "❌ An error occurred: contact MahMUD %1\n•WhatsApp: 01836298139",
-                        success: "✅ | Here's your art image baby\n• Style: %1\n• Style name: %2"
-                },
-                en: {
-                        list_header: "✅ | 𝐀𝐯𝐚𝐢𝐥𝐚𝐛𝐥𝐞 𝐀𝐫𝐭 𝐒𝐭𝐲𝐥𝐞𝐬 𝐋𝐢𝐬𝐭:\n\n",
-                        no_image: "• Baby, Please reply to a photo.",
-                        invalid_style: "❌ Style number must be between 1 and 100.",
-                        generating: "🔄 | Applying art, please wait...\n• Style: %1\n• Style name: %2",
-                        error: "❌ An error occurred: contact MahMUD %1\n•WhatsApp: 01836298139",
-                        success: "✅ | Here's your art image baby\n• Style: %1\n• Style name: %2"
-                },
-                vi: {
-                        list_header: "✅ | 𝐃𝐚𝐧𝐡 𝐬á𝐜𝐡 𝐩𝐡𝐨𝐧𝐠 𝐜á𝐜𝐡 𝐧𝐠𝐡ệ 𝐭𝐡𝐮ậ𝐭:\n\n",
-                        no_image: "Vui lòng phản hồi một ảnh.",
-                        invalid_style: "❌ Số kiểu phải từ 1 đến 100.",
-                        generating: "🔄 | Applying art, please wait...\n• Style: %1\n• Style name: %2",
-                        error: "❌ An error occurred: contact MahMUD %1\n•WhatsApp: 01836298139",
-                        success: "✅ | Here's your art image baby\n• Style: %1\n• Style name: %2"
-                }
-        },
+    onStart: async function ({ api, event, args }) {
+        const { threadID, messageID, senderID } = event;
+        const prompt = args.join(" ");
 
-        onStart: async function ({ api, event, args, message, getLang }) {
-                const authorName = String.fromCharCode(77, 97, 104, 77, 85, 68);
-                if (this.config.author !== authorName) {
-                        return api.sendMessage("You are not authorized to change the author name.", event.threadID, event.messageID);
-                }
-
-                const { threadID, messageID } = event;
-                const cacheDir = path.join(__dirname, "cache");
-                const cachePath = path.join(cacheDir, `art_${threadID}_${Date.now()}.png`);
-                let waitMsg;
-
-                try {
-                        if (args[0] === "list") {
-                                const res = await axios.get(`${await baseApiUrl()}/api/art/list`);
-                                const styles = res.data.styles;
-                                let text = getLang("list_header");
-                                for (const key in styles) {
-                                        text += `${key}: ${styles[key]}\n`;
-                                }
-                                return message.reply(text);
-                        }
-
-                        const replied = event.messageReply?.attachments?.[0];
-                        if (!replied || replied.type !== "photo") {
-                                return message.reply(getLang("no_image"));
-                        }
-
-                        const styleNum = parseInt(args[0] || "1");
-                        if (isNaN(styleNum) || styleNum < 1 || styleNum > 100) {
-                                return message.reply(getLang("invalid_style"));
-                        }
-
-                        const imageUrl = encodeURIComponent(replied.url);
-
-                        let styleName = "Loading...";
-                        try {
-                                const listRes = await axios.get(`${await baseApiUrl()}/api/art/list`);
-                                styleName = listRes.data.styles[styleNum] || "Custom Art";
-                        } catch (e) {
-                                styleName = "Art";
-                        }
-
-                        api.setMessageReaction("⏳", messageID, () => { }, true);
-                        
-                        waitMsg = await message.reply(getLang("generating", styleNum, styleName));
-
-                        const res = await axios({
-                                url: `${await baseApiUrl()}/api/art?imageUrl=${imageUrl}&style=${styleNum}`,
-                                method: "GET",
-                                responseType: "arraybuffer",
-                                timeout: 180000
-                        });
-
-                        if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir, { recursive: true });
-                        fs.writeFileSync(cachePath, Buffer.from(res.data, "binary"));
-                        
-                        if (waitMsg) message.unsend(waitMsg.messageID);
-
-                        const body = getLang("success", styleNum, styleName);
-
-                        return message.reply({
-                                body: body,
-                                attachment: fs.createReadStream(cachePath)
-                        }, () => { 
-                                api.setMessageReaction("🪽", messageID, () => { }, true);
-                                if (fs.existsSync(cachePath)) fs.unlinkSync(cachePath); 
-                        });
-
-                } catch (err) {
-                        if (waitMsg) message.unsend(waitMsg.messageID);
-                        api.setMessageReaction("❌", messageID, () => { }, true);
-                        if (fs.existsSync(cachePath)) fs.unlinkSync(cachePath);
-                        return message.reply(getLang("error", err.message || "API Error"));
-                }
+        if (!prompt) {
+            return api.sendMessage("✨ Please enter a prompt!", threadID, messageID);
         }
+
+        api.setMessageReaction("⏳", messageID, (err) => {}, true);
+        const startTime = Date.now();
+
+        try {
+            const apiUrl = `${await getApiBaseUrl()}/api/artx?prompt=${encodeURIComponent(prompt)}`;
+            const response = await axios.get(apiUrl);
+            const { status, images } = response.data;
+
+            if (!status || !images || images.length < 4) {
+                throw new Error("Failed to get 4 images from API");
+            }
+
+            const cacheDir = path.join(__dirname, 'cache');
+            if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir, { recursive: true });
+
+            const imgBuffers = images.map(img => Buffer.from(img.replace(/^data:image\/png;base64,/, ""), 'base64'));
+            
+            const canvas = createCanvas(1024, 1024);
+            const ctx = canvas.getContext('2d');
+
+            for (let i = 0; i < 4; i++) {
+                const img = await loadImage(imgBuffers[i]);
+                const x = (i % 2) * 512;
+                const y = Math.floor(i / 2) * 512;
+                ctx.drawImage(img, x, y, 512, 512);
+                
+                ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+                ctx.fillRect(x + 10, y + 10, 40, 40);
+                ctx.fillStyle = "white";
+                ctx.font = "bold 30px Arial";
+                ctx.fillText(i + 1, x + 20, y + 40);
+            }
+
+            const gridPath = path.join(cacheDir, `grid_${senderID}_${Date.now()}.png`);
+            fs.writeFileSync(gridPath, canvas.toBuffer());
+
+            const timeTaken = ((Date.now() - startTime) / 1000).toFixed(2);
+            api.setMessageReaction("✅", messageID, (err) => {}, true);
+
+            return api.sendMessage({
+                body: `⏱️ Time: ${timeTaken}s\n━━━━━━━━━━━━━━━━━━━━\nReply with 1-4 to get the full image.`,
+                attachment: fs.createReadStream(gridPath)
+            }, threadID, (err, info) => {
+                if (fs.existsSync(gridPath)) fs.unlinkSync(gridPath);
+                global.GoatBot.onReply.set(info.messageID, {
+                    commandName: this.config.name,
+                    author: senderID,
+                    images: images
+                });
+            }, messageID);
+
+        } catch (error) {
+            api.setMessageReaction("❌", messageID, (err) => {}, true);
+            return api.sendMessage(`⚠️ Error: ${error.message}`, threadID, messageID);
+        }
+    },
+
+    onReply: async function ({ api, event, Reply }) {
+        const { author, images } = Reply;
+        if (event.senderID !== author) return;
+
+        const index = parseInt(event.body) - 1;
+        if (isNaN(index) || index < 0 || index > 3) return;
+
+        const cachePath = path.join(__dirname, "cache", `single_${Date.now()}.png`);
+        const base64Data = images[index].replace(/^data:image\/png;base64,/, "");
+        
+        fs.writeFileSync(cachePath, Buffer.from(base64Data, 'base64'));
+
+        return api.sendMessage({
+            body: `✅ Image ${index + 1} is ready!`,
+            attachment: fs.createReadStream(cachePath)
+        }, event.threadID, () => {
+            if (fs.existsSync(cachePath)) fs.unlinkSync(cachePath);
+        }, event.messageID);
+    }
 };

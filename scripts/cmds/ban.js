@@ -1,11 +1,11 @@
 const { findUid } = global.utils;
-const moment = require("../../logger/date-time.js");
+const moment = require("moment-timezone");
 
 module.exports = {
 	config: {
 		name: "ban",
 		version: "1.4",
-		author: "NTKhang",
+		author: "Shihab",
 		countDown: 5,
 		role: 1,
 		description: {

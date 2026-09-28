@@ -1,90 +1,91 @@
-const axios = require("axios");
-const fs = require("fs");
-const path = require("path");
+const { createCanvas, loadImage } = require('canvas');
+const fs = require('fs-extra');
+const path = require('path');
+const axios = require('axios');
 
-const mahmud = async () => {
-        const base = await axios.get("https://raw.githubusercontent.com/mahmudx7/HINATA/main/baseApiUrl.json");
-        return base.data.mahmud;
-};
+const ACCESS_TOKEN = "350685531728|62f8ce9f74b12f84c123cc23437a4a32";
 
 module.exports = {
-        config: {
-                name: "kicked",
-                aliases: ["latthi"],
-                version: "1.7",
-                author: "MahMUD",
-                countDown: 5,
-                role: 0,
-                description: {
-                        bn: "প্রিয়জনের সাথে kicked ইমেজ জেনারেট করুন",
-                        en: "Generate a image with your kicked one",
-                        vi: "Tạo hình ảnh ôm nhau trên giường với người yêu"
-                },
-                category: "fun",
-                guide: {
-                        bn: '   {pn} @মেনশন: কাউকে মেনশন দিয়ে ব্যবহার করুন',
-                        en: '   {pn} @mention: Mention someone to use',
-                        vi: '   {pn} @mention: Đề cập đến ai đó để sử dụng'
-                }
-        },
+  config: {
+    name: "kicked",
+    version: "2.5",
+    author: "Shihab",
+    countDown: 5,
+    role: 0,
+    shortDescription: "Generate a kick image with circular avatars",
+    longDescription: "Generate an image showing the sender kicking the mentioned/replied user based on a template.",
+    category: "FUN & SOCIAL",
+    guide: "{pn} @tag or reply to a message"
+  },
 
-        langs: {
-                bn: {
-                        noMention: "× বেবি, কাউকে তো মেনশন দাও",
-                        success: "𝐇𝐞𝐫𝐞’𝐬 𝐲𝐨𝐮𝐫 𝐢𝐦𝐚𝐠𝐞 𝐛𝐚𝐛𝐲",
-                        error: "× সমস্যা হয়েছে: %1। প্রয়োজনে Contact MahMUD।\n•WhatsApp: 01836298139"
-                },
-                en: {
-                        noMention: "× Baby, please mention someone!",
-                        success: "𝐇𝐞𝐫𝐞’𝐬 𝐲𝐨𝐮𝐫 𝐢𝐦𝐚𝐠𝐞 𝐛𝐚𝐛𝐲",
-                        error: "× API error: %1. Contact MahMUD for help.\n•WhatsApp: 01836298139"
-                },
-                vi: {
-                        noMention: "× Cưng ơi, hãy đề cập đến ai đó",
-                        success: "Ảnh của cưng đây",
-                        error: "× Lỗi: %1. Liên hệ MahMUD để hỗ trợ.\n•WhatsApp: 01836298139"
-                }
-        },
+  onStart: async function({ event, message }) {
+    const uid1 = event.senderID;
+    let uid2;
 
-        onStart: async function ({ api, event, message, getLang }) {
-                const authorName = String.fromCharCode(77, 97, 104, 77, 85, 68);
-                if (this.config.author.trim() !== authorName) {
-                        return api.sendMessage("You are not authorized to change the author name.", event.threadID, event.messageID);
-                }
+    if (event.messageReply) {
+      uid2 = event.messageReply.senderID;
+    } else {
+      const mentions = Object.keys(event.mentions || {});
+      uid2 = mentions[0];
+    }
 
-                const mentions = Object.keys(event.mentions);
-                if (mentions.length === 0) return message.reply(getLang("noMention"));
+    if (!uid2) return message.reply("Please mention a user or reply to a message to kick! 🦵");
 
-                const senderID = event.senderID;
-                const targetID = mentions[0];
-                const imgPath = path.join(__dirname, "cache", `kicked_${senderID}_${targetID}.png`);
-                if (!fs.existsSync(path.dirname(imgPath))) fs.mkdirSync(path.dirname(imgPath), { recursive: true });
+    async function getFbProfilePic(userId) {
+      const url = `https://graph.facebook.com/${userId}/picture?width=512&height=512&access_token=${ACCESS_TOKEN}&redirect=false`;
+      try {
+        const res = await axios.get(url);
+        return res.data.data.url;
+      } catch {
+        return `https://graph.facebook.com/${userId}/picture?width=512&height=512`;
+      }
+    }
 
-                try {
-                     
-                        api.setMessageReaction("⏳", event.messageID, () => {}, true);
-                        
-                        const base = await mahmud();
-                        const response = await axios.post(`${base}/api/kicked`, 
-                                { senderID, targetID }, 
-                                { responseType: "arraybuffer" }
-                        );
+    function drawCircleAvatar(ctx, img, x, y, size) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2, true);
+      ctx.closePath();
+      ctx.clip();
+      ctx.drawImage(img, x, y, size, size);
+      ctx.restore();
+    }
 
-                        fs.writeFileSync(imgPath, Buffer.from(response.data, "binary"));
+    try {
+      const avatar1Url = await getFbProfilePic(uid1);
+      const avatar2Url = await getFbProfilePic(uid2);
+      const templateUrl = "https://i.imgur.com/DqvoM04.jpeg";
 
-                        return message.reply({
-                                body: getLang("success"),
-                                attachment: fs.createReadStream(imgPath)
-                        }, () => {
-                                api.setMessageReaction("✅", event.messageID, () => {}, true);
-                                if (fs.existsSync(imgPath)) fs.unlinkSync(imgPath);
-                        });
+      const [template, img1, img2] = await Promise.all([
+        loadImage(templateUrl),
+        loadImage(avatar1Url),
+        loadImage(avatar2Url)
+      ]);
 
-                } catch (err) {
-                        console.error("kick Error:", err);
-                        api.setMessageReaction("❌", event.messageID, () => {}, true);
-                        if (fs.existsSync(imgPath)) fs.unlinkSync(imgPath);
-                        return message.reply(getLang("error", err.message));
-                }
-        }
+      const canvas = createCanvas(template.width, template.height);
+      const ctx = canvas.getContext("2d");
+
+      ctx.drawImage(template, 0, 0, canvas.width, canvas.height);
+
+      drawCircleAvatar(ctx, img1, 322, 110, 70); 
+      drawCircleAvatar(ctx, img2, 175, 160, 70);
+
+      const tmpDir = path.join(__dirname, 'cache');
+      if (!fs.existsSync(tmpDir)) fs.ensureDirSync(tmpDir);
+
+      const filePath = path.join(tmpDir, `kicked_${uid1}_${uid2}.png`);
+      fs.writeFileSync(filePath, canvas.toBuffer("image/png"));
+
+      return message.reply({
+        body: "🦶 💥 DISRESPECTFUL KICK!!!",
+        attachment: fs.createReadStream(filePath)
+      }, () => {
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      });
+
+    } catch (error) {
+      console.error(error);
+      return message.reply("⚠️ Error generating image.");
+    }
+  }
 };

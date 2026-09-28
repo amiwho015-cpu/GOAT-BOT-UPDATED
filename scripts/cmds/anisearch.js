@@ -1,115 +1,82 @@
 const axios = require("axios");
-const fs = require("fs");
-const path = require("path");
 
-const API = "https://azadx69x.is-a.dev";
+const API_CONFIG_URL = "https://raw.githubusercontent.com/goatbotnx/xalmanx210/refs/heads/main/apis.json";
+const API_KEY = "xalman-hub";
+let apiBaseUrl = null;
+let apiConfigRequest = null;
+
+async function getApiBaseUrl() {
+  if (apiBaseUrl) return apiBaseUrl;
+
+  if (!apiConfigRequest) {
+    apiConfigRequest = axios
+      .get(API_CONFIG_URL, { timeout: 15000 })
+      .then(({ data }) => {
+        const baseUrl = data?.[API_KEY];
+
+        if (typeof baseUrl !== "string" || !baseUrl.trim()) {
+          throw new Error(`Missing API key in apis.json: ${API_KEY}`);
+        }
+
+        apiBaseUrl = baseUrl.replace(/\/+$/, "");
+        return apiBaseUrl;
+      })
+      .finally(() => {
+        apiConfigRequest = null;
+      });
+  }
+
+  return apiConfigRequest;
+}
 
 module.exports = {
   config: {
     name: "anisearch",
-    version: "0.0.7",
-    author: "Azadx69x",
+    aliases: ["amv", "animesearch"],
+    version: "2.0",
+    author: "Shihab",
+    countDown: 3,
     role: 0,
-    category: "anime",
-    shortDescription: "Fetch anime video",
-    cooldown: 5
+    description: "Search and get Anime TikTok videos",
+    category: "ANIME",
+    guide: "{pn} <anime name>"
   },
 
-  onStart: async function ({ message, args, api, event }) {
-    let file;
+  onStart: async function ({ api, event, message, args }) {
+    const { threadID, messageID } = event;
+    const query = args.join(" ");
+    if (!query) return message.reply("❌ Please provide an anime name to search.");
 
-    const react = emoji => {
-      try {
-        api.setMessageReaction(
-          emoji,
-          event.messageID,
-          () => {},
-          true
-        );
-      } catch {}
-    };
+    api.setMessageReaction("⏳", messageID, () => {}, true);
 
-    const removeFile = () => {
-      if (file && fs.existsSync(file)) {
-        fs.unlink(file, () => {});
-      }
-    };
+    const API_URL = `${await getApiBaseUrl()}/api/anisearch?q=${encodeURIComponent(query)}`;
 
     try {
-      const query =
-        args.join(" ").trim() || "random";
+      const res = await axios.get(API_URL, { timeout: 15000 });
+      const results = res.data.results;
 
-      const url =
-        `${API}/api/anisearch/` +
-        `${encodeURIComponent(query)}`;
-
-      react("🎌");
-
-      const { data } = await axios.get(url, {
-        timeout: 30000
-      });
-
-      const video =
-        data?.data?.data || data?.data;
-
-      if (!video?.video_url) {
-        throw new Error(
-          video?.message || "No video found"
-        );
+      if (!results || results.length === 0) {
+        api.setMessageReaction("❌", messageID, () => {}, true);
+        return message.reply(`❌ No videos found for "${query}".`);
       }
 
-      file = path.join(
-        __dirname,
-        `anisearch_${Date.now()}.mp4`
-      );
+      const video = results[0];
+      const stream = await global.utils.getStreamFromURL(video.video_url);
 
-      const response = await axios.get(
-        video.video_url,
-        {
-          responseType: "stream",
-          timeout: 60000,
-          headers: {
-            "User-Agent": "Mozilla/5.0"
-          }
-        }
-      );
+      api.setMessageReaction("✅", messageID, () => {}, true);
 
-      const writer = fs.createWriteStream(file);
-      response.data.pipe(writer);
+      const msg = `🎬 𝗔𝗡𝗜𝗠𝗘 𝗦𝗘𝗔𝗥𝗖𝗛 𝗥𝗘𝗦𝗨𝗟𝗧
+━━━━━━━━━━━━━━━━━━`;
 
-      await new Promise((resolve, reject) => {
-        writer.on("finish", resolve);
-        writer.on("error", reject);
-        response.data.on("error", reject);
-      });
-
-      const stream = fs.createReadStream(file);
-
-      stream.once("close", removeFile);
-      stream.once("error", removeFile);
-
-      await message.reply({
+      return api.sendMessage({
+        body: msg,
         attachment: stream
-      });
+      }, threadID, messageID);
 
-      react("✅");
-    } catch (error) {
-      react("❌");
-
-      await message.reply(
-        `❌ ${
-          error?.response?.data?.message ||
-          error.message ||
-          "Failed"
-        }`
-      );
-    } finally {
-      const timer = setTimeout(
-        removeFile,
-        60000
-      );
-
-      timer.unref?.();
+    } catch (e) {
+      console.error(e);
+      api.setMessageReaction("❌", messageID, () => {}, true);
+      return message.reply("❌ Error fetching video. Please try again.");
     }
   }
 };

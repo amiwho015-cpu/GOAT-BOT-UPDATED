@@ -1,45 +1,105 @@
 const axios = require("axios");
-const fs = require("fs");
+
+const API_CONFIG_URL = "https://raw.githubusercontent.com/goatbotnx/xalmanx210/refs/heads/main/apis.json";
+const API_KEY = "xalman-hub";
+let apiBaseUrl = null;
+let apiConfigRequest = null;
+
+async function getApiBaseUrl() {
+  if (apiBaseUrl) return apiBaseUrl;
+
+  if (!apiConfigRequest) {
+    apiConfigRequest = axios
+      .get(API_CONFIG_URL, { timeout: 15000 })
+      .then(({ data }) => {
+        const baseUrl = data?.[API_KEY];
+
+        if (typeof baseUrl !== "string" || !baseUrl.trim()) {
+          throw new Error(`Missing API key in apis.json: ${API_KEY}`);
+        }
+
+        apiBaseUrl = baseUrl.replace(/\/+$/, "");
+        return apiBaseUrl;
+      })
+      .finally(() => {
+        apiConfigRequest = null;
+      });
+  }
+
+  return apiConfigRequest;
+}
+const fs = require("fs-extra");
 const path = require("path");
 
 module.exports = {
   config: {
     name: "4k",
-    version: "0.0.7",
-    author: "Azadx69x",
-    countDown: 5,
+    aliases: ["upscale"],
+    version: "3.1",
+    author: "Shihab",
+    countDown: 15,
     role: 0,
-    shortDescription: { en: "Upscale image to 4K" },
-    longDescription: { en: "Reply to any image to upscale it to 4K quality" },
-    category: "image",
-    guide: { en: "Reply to an image: {pn}" }
+    shortDescription: "AI Image Upscaler",
+    longDescription: "Reply to any image using the command and get 4k results",
+    category: "IMAGE",
+    guide: "{pn} reply to an image"
   },
-  onStart: async function ({ api, event, message }) {
-    let lid;
+
+  onStart: async function ({ event, message }) {
+    const { messageReply, type } = event;
+
+    if (
+      type !== "message_reply" ||
+      !messageReply.attachments ||
+      messageReply.attachments[0].type !== "photo"
+    ) {
+      return message.reply("⚠️ Please reply to an image to upscale it to 4K.");
+    }
+
+    const imageUrl = messageReply.attachments[0].url;
+    const cacheDir = path.join(__dirname, "cache");
+    const filePath = path.join(cacheDir, `upscale_${Date.now()}.png`);
+
+    if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir, { recursive: true });
+
+    await message.reply("⏳ Processing your image to .. This may take a moment.");
+
     try {
-      const img = event.type === "message_reply" && event.messageReply.attachments?.[0]?.url;
-      if (!img) return message.reply("❌ Please reply to an image.");
-      const m = await message.reply("😺 4K Processing...\n⏳ Please Wait...");
-      lid = m.messageID;
-      const res = await axios.get(`https://azadx69x-4k-apis.vercel.app/api/4k?imgUrl=${encodeURIComponent(img)}`, { timeout: 60000 });
-      if (res.data.status !== "success" || !res.data.upscaledImage) throw new Error("Upscale failed");
-      const imgStream = await axios({ method: "GET", url: res.data.upscaledImage, responseType: "stream", timeout: 30000 });
-      const cache = path.join(__dirname, "cache");
-      if (!fs.existsSync(cache)) fs.mkdirSync(cache, { recursive: true });
-      const file = path.join(cache, `up_${Date.now()}.jpg`);
-      const writer = fs.createWriteStream(file);
-      imgStream.data.pipe(writer);
-      writer.on("finish", async () => {
-        api.setMessageReaction("✅", event.messageID, () => {}, true);
-        if (lid) await api.unsendMessage(lid);
-        await message.reply({ body: "✅ Image Upscaled To 4K Successfully!", attachment: fs.createReadStream(file) });
-        try { fs.unlinkSync(file); } catch {}
+      const UPSCALE_API = `${await getApiBaseUrl()}/api/upscale`;
+
+      const res = await axios.post(
+        UPSCALE_API,
+        { imageUrl: imageUrl },
+        {
+          responseType: "arraybuffer",
+          timeout: 300000
+        }
+      );
+
+      await fs.writeFile(filePath, Buffer.from(res.data));
+
+      await message.reply({
+        body: "✅ нєяє ιѕ уσυя 4к вву 🥀",
+        attachment: fs.createReadStream(filePath)
       });
-      writer.on("error", async () => { if (lid) await api.unsendMessage(lid); message.reply("❌ Failed To Save Image."); });
-    } catch (e) {
-      console.error(e.message);
-      if (lid) await api.unsendMessage(lid);
-      message.reply("❌ 4K Upscale Failed. Try Again.");
+
+      setTimeout(() => {
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      }, 5000);
+
+    } catch (err) {
+      console.error("UPSCALE ERROR:", err);
+
+      let errorMsg = "❌ Upscale service is currently unavailable.";
+      if (err.code === "ECONNABORTED") {
+        errorMsg = "❌ Server timeout: The image processing took too long.";
+      } else if (err.response) {
+        errorMsg = `❌ API Error: ${err.response.status} - ${err.response.statusText}`;
+      }
+
+      message.reply(errorMsg);
+
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
     }
   }
 };

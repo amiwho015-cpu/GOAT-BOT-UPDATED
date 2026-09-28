@@ -1,105 +1,76 @@
-const axios = require("axios");
-const fs = require("fs");
+const { createCanvas, loadImage } = require('canvas');
+const fs = require("fs-extra");
 const path = require("path");
 
-const mahmud = async () => {
-        const base = await axios.get("https://raw.githubusercontent.com/mahmudx7/HINATA/main/baseApiUrl.json");
-        return base.data.mahmud;
-};
-
 module.exports = {
-        config: {
-                name: "toilet",
-                version: "2.7",
-                author: "MahMUD",
-                countDown: 10,
-                role: 0,
-                description: {
-                        en: "Give someone a toilet effect",
-                        vi: "Tạo hiệu ứng toilet cho ai đó"
-                },
-                category: "fun",
-                guide: {
-                        en: '   {pn} <@tag>: Give toilet effect by tagging'
-                                + '\n   {pn} <uid>: Create effect using UID'
-                                + '\n   (Or use by replying to a message)',
-                        vi: '   {pn} <@tag>: Tạo hiệu ứng toilet bằng cách gắn thẻ'
-                                + '\n   {pn} <uid>: Tạo hiệu ứng bằng UID'
-                                + '\n   (Hoặc phản hồi tin nhắn)'
-                }
-        },
+  config: {
+    name: "toilet",
+    version: "3.3",
+    author: "Shihab",
+    countDown: 5,
+    role: 0,
+    category: "FUN & SOCIAL",
+    guide: { en: "{pn} @mention / reply / UID" }
+  },
 
-        langs: {
-                en: {
-                        noTarget: "× Baby, mention, reply, or provide UID of the target.",
-                        success: "Baby, it’s just for fun. Don’t take it seriously.\n• 𝐄𝐟𝐟𝐞𝐜𝐭: 𝐓𝐨𝐢𝐥𝐞𝐭\n• 𝐓𝐚𝐫𝐠𝐞𝐭: %1",
-                        error: "API error: %1. Contact MahMUD for help.\n•WhatsApp: 01836298139"
-                },
-                vi: {
-                        noTarget: "× Cưng ơi, hãy gắn thẻ, phản hồi hoặc cung cấp UID mục tiêu.",
-                        success: "Baby, it’s just for fun. Don’t take it seriously.\n• 𝐄𝐟𝐟𝐞𝐜𝐭: 𝐓𝐨𝐢𝐥𝐞𝐭\n• 𝐓𝐚𝐫𝐠𝐞𝐭: %1",
-                        error: "API error: %1. Contact MahMUD for help.\n•WhatsApp: 01836298139"
-                }
-        },
+  onStart: async function ({ api, event, args }) {
+    const { threadID, messageID, senderID, type, messageReply, mentions } = event;
+    const cacheDir = path.join(__dirname, 'cache');
+    if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir);
 
-        onStart: async function ({ api, event, args, message, getLang }) {
-                const authorName = String.fromCharCode(77, 97, 104, 77, 85, 68);
-                if (this.config.author !== authorName) {
-                        return api.sendMessage("You are not authorized to change the author name.", event.threadID, event.messageID);
-                }
+    api.setMessageReaction("⏳", messageID, () => {}, true);
 
-                const { senderID, mentions, messageReply, messageID } = event;
-                let id2;
-                let targetName = "";
+    const bgUrl = "https://i.imgur.com/AZ5SByA.jpeg";
+    let targetID;
 
-                if (messageReply) {
-                        id2 = messageReply.senderID;
-                } else if (Object.keys(mentions).length > 0) {
-                        id2 = Object.keys(mentions)[0];
-                } else if (args[0] && !isNaN(args[0])) {
-                        id2 = args[0];
-                } else {
-                        id2 = senderID;
-                }
+    if (type === "message_reply") {
+      targetID = messageReply.senderID;
+    } else if (Object.keys(mentions).length > 0) {
+      targetID = Object.keys(mentions)[0];
+    } else if (args.length > 0) {
+      targetID = args[0];
+    } else {
+      targetID = senderID;
+    }
 
-                try {
-                        const userInfo = await api.getUserInfo(id2);
-                        if (userInfo && userInfo[id2]) {
-                                targetName = userInfo[id2].name || userInfo[id2].firstName || "User";
-                        } else {
-                                targetName = "User";
-                        }
-                } catch (e) {
-                        targetName = "User";
-                }
+    try {
+      const [background, avatar] = await Promise.all([
+        loadImage(bgUrl),
+        loadImage(`https://graph.facebook.com/${targetID}/picture?width=1000&height=1000&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`)
+      ]);
 
-                if (!id2) return message.reply(getLang("noTarget"));
+      const canvas = createCanvas(background.width, background.height);
+      const ctx = canvas.getContext('2d');
 
-                api.setMessageReaction("⏳", messageID, () => { }, true);
+      ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
 
-                const cacheDir = path.join(__dirname, "cache");
-                const filePath = path.join(cacheDir, `toilet_${id2}.png`);
+      const x = 185;
+      const y = 230;
+      const size = 80;
 
-                try {
-                        if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir);
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2);
+      ctx.closePath();
+      ctx.clip();
 
-                        const response = await axios.get(`${await mahmud()}/api/fun?type=toilet&user=${id2}`, { responseType: "arraybuffer" });
-                        
-                        fs.writeFileSync(filePath, Buffer.from(response.data));
- 
-                        api.setMessageReaction("🪽", messageID, () => { }, true);
-  
-                        return message.reply({
-                                body: getLang("success", targetName),
-                                attachment: fs.createReadStream(filePath)
-                        }, () => {
-                                if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-                        });
+      ctx.drawImage(avatar, x, y, size, size);
+      ctx.restore();
 
-                } catch (err) {
-                        console.error("error:", err);
-                        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-                        return message.reply(getLang("error", err.message));
-                }
-        }
+      const cachePath = path.join(cacheDir, `toilet_${targetID}.png`);
+      fs.writeFileSync(cachePath, canvas.toBuffer());
+
+      return api.sendMessage({
+        body: "You deserve this place 🤧🔥",
+        attachment: fs.createReadStream(cachePath)
+      }, threadID, () => {
+        api.setMessageReaction("✅", messageID, () => {}, true);
+        fs.unlinkSync(cachePath);
+      }, messageID);
+
+    } catch (e) {
+      api.setMessageReaction("❌", messageID, () => {}, true);
+      return api.sendMessage("❌ Error processing image", threadID, messageID);
+    }
+  }
 };

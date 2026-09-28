@@ -1,169 +1,111 @@
-const fs = require("fs-extra");
-const path = require("path");
-const { Readable } = require("stream");
-const { createCanvas, loadImage, isCanvasAvailable } = require("../../func/canvasHelper.js");
-const { Jimp } = require("jimp");
+const axios = require('axios');
+const fs = require('fs-extra');
+const path = require('path');
+const { createCanvas, loadImage } = require('canvas');
 
 module.exports = {
-  config: {
-    name: "hug",
-    version: "2.2.0",
-    author: "frnAlt",
-    countDown: 5,
-    role: 0,
-    shortDescription: { en: "Hug someone or two tagged users" },
-    longDescription: "{p}hug @mention someone you want to hug that person 🫂",
-    category: "funny",
-    guide: "{p}hug @user or {p}hug @user1 @user2 or reply to a message"
-  },
+    config: {
+        name: "hug",
+        version: "2.0",
+        author: "Shihab",
+        countDown: 5,
+        role: 0,
+        shortDescription: "Send a warm hug!",
+        longDescription: "Hug someone using mention, reply, or UID. Generates a custom image.",
+        category: "LOVE",
+        guide: "{pn} @mention | [reply] {pn} | {pn} uid"
+    },
 
-  onStart: async function ({ api, message, event, args, usersData }) {
-    let one = String(event.senderID);
-    let two = null;
-    const mentions = event.mentions ? Object.keys(event.mentions) : [];
+    onStart: async function ({ api, event, args, usersData }) {
+        const { threadID, messageID, senderID, mentions, type, messageReply } = event;
+        
+        let targetID;
 
-    if (mentions.length >= 2) {
-      one = mentions[0];
-      two = mentions[1];
-    } else if (mentions.length === 1) {
-      two = mentions[0];
-      if (event.messageReply) {
-        const rUid = event.messageReply.senderID || event.messageReply.actorFbId;
-        if (rUid && rUid !== two) one = String(rUid);
-      }
-    } else if (event.messageReply) {
-      const rUid = event.messageReply.senderID || event.messageReply.actorFbId;
-      if (rUid) two = String(rUid);
-    } else if (args && args.length >= 2 && /^\d+$/.test(args[0]) && /^\d+$/.test(args[1])) {
-      one = args[0];
-      two = args[1];
-    } else if (args && args.length >= 1 && /^\d+$/.test(args[0])) {
-      two = args[0];
-    }
-
-    // Name match fallback if mentions was omitted
-    if (!two && args && args.length > 0) {
-      const raw = args.join(" ").replace(/^@/, "").trim().toLowerCase();
-      const allM = global.db?.allThreadData?.find(t => t.threadID == event.threadID)?.members || [];
-      const found = allM.find(m => m.name && m.name.toLowerCase().includes(raw)) ||
-                    global.db?.allUserData?.find(u => u.name && u.name.toLowerCase().includes(raw));
-      if (found) two = String(found.userID || found.id);
-    }
-
-    if (!two) {
-      return message.reply("Please @mention 1 or 2 users, or reply to someone to hug them! 🫂");
-    }
-
-    try {
-      const avatarURL1 = await usersData.getAvatarUrl(one);
-      const avatarURL2 = await usersData.getAvatarUrl(two);
-      const name1 = (await usersData.getName(one).catch(() => null)) || event.mentions?.[one]?.replace(/^@/, "").trim() || "You";
-      const name2 = (await usersData.getName(two).catch(() => null)) || event.mentions?.[two]?.replace(/^@/, "").trim() || "Friend";
-
-      // 1. Canvas Renderer
-      if (isCanvasAvailable && typeof createCanvas === "function") {
-        const canvas = createCanvas(850, 480);
-        const ctx = canvas.getContext("2d");
-
-        // Warm sunset gradient
-        const grad = ctx.createLinearGradient(0, 0, 850, 480);
-        grad.addColorStop(0, "#ff758c");
-        grad.addColorStop(1, "#ff7eb3");
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, 850, 480);
-
-        // Glassmorphic container
-        ctx.fillStyle = "rgba(0, 0, 0, 0.25)";
-        if (typeof ctx.roundRect === "function") {
-          ctx.beginPath();
-          ctx.roundRect(40, 40, 770, 400, 24);
-          ctx.fill();
+        if (type === "message_reply") {
+            targetID = messageReply.senderID;
+        } else if (Object.keys(mentions).length > 0) {
+            targetID = Object.keys(mentions)[0];
+        } else if (args[0] && !isNaN(args[0])) {
+            targetID = args[0];
         } else {
-          ctx.fillRect(40, 40, 770, 400);
+            return api.sendMessage("Oops! You forgot to mention someone. Please mention, reply, or provide a UID to send a hug! 🤗", threadID, messageID);
         }
 
-        // Title text
-        ctx.fillStyle = "#ffffff";
-        ctx.font = "bold 32px sans-serif";
-        ctx.textAlign = "center";
-        ctx.fillText("🫂 A WARM HUG 🫂", 425, 95);
+        try {
+            api.sendMessage("Sending a warm hug... Please wait! 🫂✨", threadID, messageID);
 
-        // Load avatars safely
-        const av1 = await loadImage(avatarURL1).catch(() => null);
-        const av2 = await loadImage(avatarURL2).catch(() => null);
+            const senderInfo = await usersData.get(senderID);
+            const targetInfo = await usersData.get(targetID);
 
-        // Draw Avatar 1 (Left)
-        if (av1) {
-          ctx.save();
-          ctx.beginPath();
-          ctx.arc(260, 240, 80, 0, Math.PI * 2);
-          ctx.lineWidth = 6;
-          ctx.strokeStyle = "#ffffff";
-          ctx.stroke();
-          ctx.closePath();
-          ctx.clip();
-          ctx.drawImage(av1, 180, 160, 160, 160);
-          ctx.restore();
+            const cleanName = (name) => {
+                if (!name) return "Someone";
+                return name.split(" (")[0].split(" •")[0].split(" @")[0].trim();
+            };
+
+            const senderName = cleanName(senderInfo.name);
+            const targetName = cleanName(targetInfo.name);
+            const senderGender = senderInfo.gender; 
+
+            const backgroundUrl = "https://i.imgur.com/WyIZ7Zk.jpeg";
+            const avatarSenderUrl = `https://graph.facebook.com/${senderID}/picture?width=512&height=512&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`;
+            const avatarTargetUrl = `https://graph.facebook.com/${targetID}/picture?width=512&height=512&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`;
+
+            const [bgImg, avatarSender, avatarTarget] = await Promise.all([
+                loadImage(backgroundUrl),
+                loadImage(avatarSenderUrl),
+                loadImage(avatarTargetUrl)
+            ]);
+
+            const canvas = createCanvas(bgImg.width, bgImg.height);
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
+
+            let senderPos, targetPos;
+            if (senderGender === 2) { 
+                senderPos = { x: 220, y: 140, r: 45 };
+                targetPos = { x: 280, y: 200, r: 45 };
+            } else {
+                senderPos = { x: 280, y: 200, r: 45 };
+                targetPos = { x: 220, y: 140, r: 45 };
+            }
+
+            function drawAvatar(img, pos) {
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(pos.x, pos.y, pos.r, 0, Math.PI * 2, true);
+                ctx.closePath();
+                ctx.clip();
+                ctx.drawImage(img, pos.x - pos.r, pos.y - pos.r, pos.r * 2, pos.r * 2);
+                ctx.restore();
+                
+                ctx.beginPath();
+                ctx.arc(pos.x, pos.y, pos.r, 0, Math.PI * 2, true);
+                ctx.lineWidth = 3;
+                ctx.strokeStyle = "#ffffff";
+                ctx.stroke();
+            }
+
+            drawAvatar(avatarSender, senderPos);
+            drawAvatar(avatarTarget, targetPos);
+
+            const cacheDir = path.join(__dirname, 'cache');
+            const cachePath = path.join(cacheDir, `hug_${senderID}_${targetID}.png`);
+            
+            fs.ensureDirSync(cacheDir);
+            fs.writeFileSync(cachePath, canvas.toBuffer());
+
+            const bodyMsg = `Aww! 🥺\n${senderName} just gave a big, warm hug to ${targetName}! 🫂💖\n\n"Sometimes a hug speaks volumes that words can't explain." ✨`;
+
+            return api.sendMessage({
+                body: bodyMsg,
+                attachment: fs.createReadStream(cachePath)
+            }, threadID, () => {
+                if (fs.existsSync(cachePath)) fs.unlinkSync(cachePath);
+            }, messageID);
+
+        } catch (error) {
+            console.error("Canvas/Hug Error:", error);
+            return api.sendMessage("Oh no! Couldn't send the hug due to an error. 💔 Check the console.", threadID, messageID);
         }
-
-        // Heart in center
-        ctx.font = "52px sans-serif";
-        ctx.fillText("💞", 425, 255);
-
-        // Draw Avatar 2 (Right)
-        if (av2) {
-          ctx.save();
-          ctx.beginPath();
-          ctx.arc(590, 240, 80, 0, Math.PI * 2);
-          ctx.lineWidth = 6;
-          ctx.strokeStyle = "#ffffff";
-          ctx.stroke();
-          ctx.closePath();
-          ctx.clip();
-          ctx.drawImage(av2, 510, 160, 160, 160);
-          ctx.restore();
-        }
-
-        // Names
-        ctx.font = "bold 22px sans-serif";
-        ctx.fillText(name1, 260, 370);
-        ctx.fillText(name2, 590, 370);
-
-        const buffer = canvas.toBuffer("image/png");
-        const stream = Readable.from(buffer);
-        stream.path = "hug.png";
-
-        return message.reply({
-          body: `🫂 ${name1} gives ${name2} a warm and loving hug! 💞`,
-          attachment: stream
-        });
-      }
-
-      // 2. Jimp Fallback
-      const bg = new Jimp({ width: 850, height: 480, color: 0xff758cff });
-      const av1 = await Jimp.read(avatarURL1).catch(() => null);
-      const av2 = await Jimp.read(avatarURL2).catch(() => null);
-
-      if (av1) {
-        av1.resize({ w: 160, h: 160 }).circle();
-        bg.composite(av1, 180, 160);
-      }
-      if (av2) {
-        av2.resize({ w: 160, h: 160 }).circle();
-        bg.composite(av2, 510, 160);
-      }
-
-      const buffer = await bg.getBuffer("image/png");
-      const stream = Readable.from(buffer);
-      stream.path = "hug.png";
-
-      return message.reply({
-        body: `🫂 ${name1} gives ${name2} a warm and loving hug! 💞`,
-        attachment: stream
-      });
-    } catch (error) {
-      console.error("[HUG ERROR]:", error);
-      return message.reply("An error occurred while generating the hug image. Please try again.");
     }
-  }
 };

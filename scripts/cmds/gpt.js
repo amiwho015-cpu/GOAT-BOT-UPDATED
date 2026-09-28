@@ -1,95 +1,115 @@
 const axios = require("axios");
 
-const baseApiUrl = async () => {
-        const base = await axios.get("https://raw.githubusercontent.com/mahmudx7/HINATA/main/baseApiUrl.json");
-        return base.data.mahmud;
-};
+const API_CONFIG_URL = "https://raw.githubusercontent.com/goatbotnx/xalmanx210/refs/heads/main/apis.json";
+const API_KEY = "xalman-hub";
+let apiBaseUrl = null;
+let apiConfigRequest = null;
+
+async function getApiBaseUrl() {
+  if (apiBaseUrl) return apiBaseUrl;
+
+  if (!apiConfigRequest) {
+    apiConfigRequest = axios
+      .get(API_CONFIG_URL, { timeout: 15000 })
+      .then(({ data }) => {
+        const baseUrl = data?.[API_KEY];
+
+        if (typeof baseUrl !== "string" || !baseUrl.trim()) {
+          throw new Error(`Missing API key in apis.json: ${API_KEY}`);
+        }
+
+        apiBaseUrl = baseUrl.replace(/\/+$/, "");
+        return apiBaseUrl;
+      })
+      .finally(() => {
+        apiConfigRequest = null;
+      });
+  }
+
+  return apiConfigRequest;
+}
+const fs = require("fs-extra");
+const path = require("path");
 
 module.exports = {
-        config: {
-                name: "gpt",
-                aliases: ["gpt4"],
-                version: "1.7",
-                author: "MahMUD",
-                countDown: 5,
-                role: 0,
-                description: {
-                        bn: "জিপিটি-৪ এআই এর সাথে চ্যাট করুন",
-                        en: "Chat with GPT-4 AI",
-                        vi: "Trò chuyện with GPT-4 AI"
-                },
-                category: "ai",
-                guide: {
-                        bn: '   {pn} <প্রশ্ন>: আপনার প্রশ্নটি লিখুন',
-                        en: '   {pn} <question>: Type your question',
-                        vi: '   {pn} <câu hỏi>: Nhập câu hỏi của bạn'
-                }
-        },
+  config: {
+    name: "gpt",
+    aliases: ["gptimg"],
+    version: "4.0",
+    author: "Shihab",
+    countDown: 5,
+    role: 0,
+    shortDescription: "AI Image Generator",
+    category: "AI"
+  },
 
-        langs: {
-                bn: {
-                        noInput: "× বেবি, কিছু তো জিজ্ঞাসা করো!",
-                        error: "× সমস্যা হয়েছে: %1। প্রয়োজনে Contact MahMUD|\n•WhatsApp: 01836298139"
-                },
-                en: {
-                        noInput: "× Baby, please ask something!",
-                        error: "× API error: %1. Contact MahMUD for help.\n•WhatsApp: 01836298139"
-                },
-                vi: {
-                        noInput: "× Cưng ơi, hãy hỏi điều gì đó!",
-                        error: "× Lỗi: %1. Liên hệ MahMUD để hỗ trợ.\n•WhatsApp: 01836298139"
-                }
-        },
+  onStart: async function ({ message, args, event, api }) {
+    try {
 
-        onStart: async function ({ api, event, args, message, getLang, commandName }) {
-                const authorName = String.fromCharCode(77, 97, 104, 77, 85, 68);
-                if (this.config.author !== authorName) {
-                        return api.sendMessage("You are not authorized to change the author name.", event.threadID, event.messageID);
-                }
+      const prompt = args.join(" ");
 
-                const prompt = args.join(" ");
-                if (!prompt) return message.reply(getLang("noInput"));
+      if (!prompt && event.type !== "message_reply") {
+        return message.reply("❌ Give prompt or reply image");
+      }
 
-                return this.handleGPT({ api, event, prompt, getLang, commandName });
-        },
+      let imageUrl = "";
 
-        onReply: async function ({ api, event, Reply, getLang, commandName }) {
-                if (Reply.author !== event.senderID) return;
-                const prompt = event.body;
-                if (!prompt) return;
-
-                return this.handleGPT({ api, event, prompt, getLang, commandName });
-        },
-
-        handleGPT: async function ({ api, event, prompt, getLang, commandName }) {
-                try {
-                        api.setMessageReaction("⏳", event.messageID, () => {}, true);
-                        
-                        const baseUrl = await baseApiUrl();                   
-                        const response = await axios.get(`${baseUrl}/api/ai`, {
-                                params: {
-                                        prompt: prompt,
-                                        ai: "gpt"
-                                }
-                        });
-
-                        const replyText = response.data.response || "No response received.";
-                        api.setMessageReaction("✅", event.messageID, () => {}, true);
-
-                        return api.sendMessage(replyText, event.threadID, (error, info) => {
-                                if (!error) {
-                                        global.GoatBot.onReply.set(info.messageID, {
-                                                commandName,
-                                                author: event.senderID
-                                        });
-                                }
-                        }, event.messageID);
-
-                } catch (err) {
-                        console.error("GPT Error:", err);
-                        api.setMessageReaction("❌", event.messageID, () => {}, true);
-                        const errorMsg = err.response?.data?.error || err.message;
-                        return api.sendMessage(getLang("error", errorMsg), event.threadID, event.messageID);
-                }
+      if (event.type === "message_reply") {
+        const att = event.messageReply.attachments?.[0];
+        if (att?.type === "photo") {
+          imageUrl = att.url;
         }
+      }
+
+      api.setMessageReaction("⏳", event.messageID, () => {}, true);
+
+      const apiUrl = imageUrl
+        ? `${await getApiBaseUrl()}/api/gptimg?prompt=${encodeURIComponent(prompt)}&image_url=${encodeURIComponent(imageUrl)}`
+        : `${await getApiBaseUrl()}/api/gptimg?prompt=${encodeURIComponent(prompt)}`;
+
+      const img = await axios({
+        url: apiUrl,
+        method: "GET",
+        responseType: "arraybuffer"
+      });
+
+      const trashDir = path.join(__dirname, "cache", "trash");
+      fs.ensureDirSync(trashDir);
+
+      const filePath = path.join(trashDir, `gpt_${Date.now()}.jpg`);
+
+      fs.writeFileSync(filePath, img.data);
+
+      api.setMessageReaction("✅", event.messageID, () => {}, true);
+
+      const caption = imageUrl
+        ? `━━━━━━━━━━━━━━━\n✨ 𝗘𝗗𝗜𝗧𝗘𝗗 𝗜𝗠𝗔𝗚𝗘\n━━━━━━━━━━━━━━━\n🎨 ${prompt}\n━━━━━━━━━━━━━━━`
+        : `━━━━━━━━━━━━━━━\n🌟 𝗚𝗘𝗡𝗘𝗥𝗔𝗧𝗘𝗗 𝗜𝗠𝗔𝗚𝗘\n━━━━━━━━━━━━━━━\n🎨 ${prompt}\n━━━━━━━━━━━━━━━`;
+
+      await message.reply({
+        body: caption,
+        attachment: fs.createReadStream(filePath)
+      });
+
+     
+      setTimeout(() => {
+        try {
+          fs.unlinkSync(filePath);
+        } catch (e) {}
+      }, 3000);
+
+    } catch (err) {
+      console.log(err);
+
+      api.setMessageReaction("❌", event.messageID, () => {}, true);
+
+      return message.reply(
+        "━━━━━━━━━━━━━━━\n" +
+        "❌ 𝗘𝗥𝗥𝗢𝗥 𝗚𝗘𝗡𝗘𝗥𝗔𝗧𝗜𝗢𝗡\n" +
+        "━━━━━━━━━━━━━━━\n" +
+        "⚠️ Try again later\n" +
+        "━━━━━━━━━━━━━━━"
+      );
+    }
+  }
 };

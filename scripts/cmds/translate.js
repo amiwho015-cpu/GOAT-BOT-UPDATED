@@ -1,94 +1,86 @@
 const axios = require("axios");
-const API = "https://azadx69x.is-a.dev/api/translate";
 
-async function translate(content, lang, message) {
-    try {
-        const res = await axios.get(`${API}?text=${encodeURIComponent(content)}&to=${encodeURIComponent(lang)}`);
-        const translated = res.data?.data?.translated || res.data?.translated;
-        if (!translated) throw new Error("Translation failed");
-        await message.reply(`📝 Original:\n   ${content}\n🌐 Translated (${lang}):\n   ${translated}`);
-    } catch {
-        await message.reply("❌ Error: Translation failed!");
-    }
+const API_CONFIG_URL = "https://raw.githubusercontent.com/goatbotnx/xalmanx210/refs/heads/main/apis.json";
+const API_KEY = "xalman-hub";
+let apiBaseUrl = null;
+let apiConfigRequest = null;
+
+async function getApiBaseUrl() {
+  if (apiBaseUrl) return apiBaseUrl;
+
+  if (!apiConfigRequest) {
+    apiConfigRequest = axios
+      .get(API_CONFIG_URL, { timeout: 15000 })
+      .then(({ data }) => {
+        const baseUrl = data?.[API_KEY];
+
+        if (typeof baseUrl !== "string" || !baseUrl.trim()) {
+          throw new Error(`Missing API key in apis.json: ${API_KEY}`);
+        }
+
+        apiBaseUrl = baseUrl.replace(/\/+$/, "");
+        return apiBaseUrl;
+      })
+      .finally(() => {
+        apiConfigRequest = null;
+      });
+  }
+
+  return apiConfigRequest;
 }
 
 module.exports = {
-    config: {
-        name: "translate",
-        aliases: ["trans"],
-        version: "0.0.1",
-        role: 0,
-        author: "Azadx69x",
-        category: "utility",
-        cooldowns: 3
-    },
-    onStart: async function ({ message, event, args, threadsData, getLang, commandName }) {
-        const input = args.join(" ").trim();
-        let content, lang;
-        const threadLang = await threadsData.get(event.threadID, "data.lang") || global.GoatBot.config.language;
+  config: {
+    name: "translate",
+    aliases: ["trans", "tr"],
+    version: "2.0",
+    author: "Shihab",
+    countDown: 5,
+    role: 0,
+    shortDescription: "Translate text with language info",
+    category: "tools",
+    guide: "{pn} [text] | [target_lang] or reply with {pn} [target_lang]"
+  },
 
-        if (args[0] && ["-r", "-react", "-reaction"].includes(args[0])) {
-            if (args[1] == "set") {
-                return message.reply("React with emoji to set", (err, info) =>
-                    global.GoatBot.onReaction.set(info.messageID, {
-                        type: "setEmoji",
-                        commandName,
-                        messageID: info.messageID,
-                        authorID: event.senderID
-                    })
-                );
-            }
-            const isEnable = args[1] == "on" ? true : args[1] == "off" ? false : null;
-            if (isEnable == null) return message.reply("Invalid argument!");
-            await threadsData.set(event.threadID, isEnable, "data.translate.autoTranslateWhenReaction");
-            return message.reply(isEnable ? "Reaction translate ON" : "Reaction translate OFF");
-        }
+  onStart: async function ({ api, event, args }) {
+    const { threadID, messageID, type, messageReply } = event;
+    const API_URL = `${await getApiBaseUrl()}/api/translate`;
 
-        if (event.messageReply) {
-            content = event.messageReply.body || "";
-            lang = getTargetLanguage(input) || threadLang;
-        } else {
-            const parsed = splitTargetLanguage(input);
-            content = parsed.text;
-            lang = parsed.lang || threadLang;
-        }
+    let textToTranslate;
+    let targetLang = "bn";
 
-        if (!content) return message.SyntaxError();
-        return translate(content, String(lang).trim().toLowerCase(), message);
-    },
-    onChat: async ({ event, threadsData }) => {
-        if (!await threadsData.get(event.threadID, "data.translate.autoTranslateWhenReaction")) return;
-        global.GoatBot.onReaction.set(event.messageID, {
-            commandName: 'translate',
-            messageID: event.messageID,
-            body: event.body,
-            type: "translate"
-        });
-    },
-    onReaction: async ({ message, Reaction, event, threadsData, getLang }) => {
-        if (Reaction.type == "setEmoji") {
-            if (event.userID != Reaction.authorID) return;
-            const emoji = event.reaction;
-            if (!emoji) return;
-            await threadsData.set(event.threadID, emoji, "data.translate.emojiTranslate");
-            return message.reply(`Emoji set to ${emoji}`, () => message.unsend(Reaction.messageID));
-        }
-        if (Reaction.type == "translate") {
-            const emojiTrans = await threadsData.get(event.threadID, "data.translate.emojiTranslate") || "🌐";
-            if (event.reaction == emojiTrans) {
-                const lang = await threadsData.get(event.threadID, "data.lang") || global.GoatBot.config.language;
-                return translate(Reaction.body, String(lang).trim().toLowerCase(), message);
-            }
-        }
+    if (type === "message_reply") {
+      textToTranslate = messageReply.body;
+      if (args[0]) targetLang = args[0];
+    } else {
+      const content = args.join(" ");
+      if (!content) return api.sendMessage("╭─❍\n│ Usage: {pn} Text | Lang\n│ Reply: {pn} Lang\n╰───────────⟡", threadID, messageID);
+
+      const splitContent = content.split("|");
+      textToTranslate = splitContent[0].trim();
+      if (splitContent[1]) targetLang = splitContent[1].trim();
     }
+
+    api.setMessageReaction("🌐", messageID, () => {}, true);
+
+    try {
+      const res = await axios.get(`${API_URL}?text=${encodeURIComponent(textToTranslate)}&to=${targetLang}`);
+
+      if (res.data.status === true) {
+        const { translated, from_lang, to_lang } = res.data;
+        
+        api.setMessageReaction("✅", messageID, () => {}, true);
+        
+        return api.sendMessage(
+          `${translated}\n\n━━━━━━━━━━━━━━━━━━\n🌐 ${from_lang.toUpperCase()} ➔ ${to_lang.toUpperCase()}`, 
+          threadID, messageID
+        );
+      } else {
+        throw new Error();
+      }
+    } catch (error) {
+      api.setMessageReaction("❌", messageID, () => {}, true);
+      return api.sendMessage("✕ Translation failed!", threadID, messageID);
+    }
+  }
 };
-
-function getTargetLanguage(input) {
-    return input.match(/(?:->|=>)\s*([a-z]{2,3})$/i)?.[1] || input.match(/^([a-z]{2,3})$/i)?.[1];
-}
-
-function splitTargetLanguage(input) {
-    const match = input.match(/^(.*?)\s*(?:->|=>)\s*([a-z]{2,3})$/i);
-    if (!match) return { text: input, lang: null };
-    return { text: match[1].trim(), lang: match[2] };
-}

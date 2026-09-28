@@ -5,14 +5,14 @@ module.exports = {
 	config: {
 		name: "callad",
 		version: "1.7",
-		author: "NTKhang",
+		author: "Shihab",
 		countDown: 5,
 		role: 0,
 		description: {
 			vi: "gửi báo cáo, góp ý, báo lỗi,... của bạn về admin bot",
 			en: "send report, feedback, bug,... to admin bot"
 		},
-		category: "contacts admin",
+		category: "box chat",
 		guide: {
 			vi: "   {pn} <tin nhắn>",
 			en: "   {pn} <message>"

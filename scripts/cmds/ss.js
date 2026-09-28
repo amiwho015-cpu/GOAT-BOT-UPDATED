@@ -1,80 +1,76 @@
 const axios = require("axios");
 
-const baseApiUrl = async () => {
-        const base = await axios.get("https://raw.githubusercontent.com/mahmudx7/HINATA/main/baseApiUrl.json");
-        return base.data.mahmud;
-};
+const API_CONFIG_URL = "https://raw.githubusercontent.com/goatbotnx/xalmanx210/refs/heads/main/apis.json";
+const API_KEY = "xalman-hub";
+let apiBaseUrl = null;
+let apiConfigRequest = null;
+
+async function getApiBaseUrl() {
+  if (apiBaseUrl) return apiBaseUrl;
+
+  if (!apiConfigRequest) {
+    apiConfigRequest = axios
+      .get(API_CONFIG_URL, { timeout: 15000 })
+      .then(({ data }) => {
+        const baseUrl = data?.[API_KEY];
+
+        if (typeof baseUrl !== "string" || !baseUrl.trim()) {
+          throw new Error(`Missing API key in apis.json: ${API_KEY}`);
+        }
+
+        apiBaseUrl = baseUrl.replace(/\/+$/, "");
+        return apiBaseUrl;
+      })
+      .finally(() => {
+        apiConfigRequest = null;
+      });
+  }
+
+  return apiConfigRequest;
+}
 
 module.exports = {
-        config: {
-                name: "ss",
-                version: "1.7",
-                author: "MahMUD",
-                role: 0,
-                description: {
-                        en: "Take a screenshot of a website",
-                        bn: "যেকোনো ওয়েবসাইটের স্ক্রিনশট নিন",
-                        vi: "Chụp ảnh màn hình của một trang web"
-                },
-                category: "tools",
-                guide: {
-                        en: "{pn} <link>",
-                        bn: "{pn} <লিঙ্ক>",
-                        vi: "{pn} <link>"
-                },
-                coolDowns: 10,
-        },
+  config: {
+    name: "ss",
+    version: "3.0",
+    author: "Shihab",
+    countDown: 5,
+    role: 0,
+    description: "Capture website screenshot (PC or mobile mode)",
+    category: "tools",
+    guide: "{pn} <url> [-mobile | -pc]"
+  },
 
-        langs: {
-                bn: {
-                        noUrl: "• বেবি, একটি লিঙ্ক (URL) তো দাও! 😘",
-                        error: "❌ An error occurred: contact MahMUD %1",
-                        success: "Here's your screenshot image <😘"
-                },
-                en: {
-                        noUrl: "• Baby, please provide a URL! 😘",
-                        error: "❌ An error occurred: contact MahMUD %1",
-                        success: "Here's your screenshot image <😘"
-                },
-                vi: {
-                        noUrl: "• Cưng ơi, vui lòng cung cấp đường dẫn URL! 😘",
-                        error: "❌ An error occurred: contact MahMUD %1",
-                        success: "Đây là ảnh chụp màn hình của bạn <😘"
-                }
-        },
+  onStart: async function ({ api, event, args }) {
+    const { threadID, messageID } = event;
 
-        onStart: async function ({ api, event, args, getLang }) {
-                const authorName = String.fromCharCode(77, 97, 104, 77, 85, 68);
-                if (this.config.author !== authorName) {
-                        return api.sendMessage("You are not authorized to change the author name.", event.threadID, event.messageID);
-                }
+    if (args.length === 0) {
+      return api.sendMessage("❌ Please provide a website URL.\nExample: /ss google.com -mobile", threadID, messageID);
+    }
 
-                const { threadID, messageID } = event;
-                const urlInput = args.join(" ");
+    let url = args[0];
+    let mode = "pc";
 
-                if (!urlInput) return api.sendMessage(getLang("noUrl"), threadID, messageID);
+    if (args.length > 1) {
+      const flag = args[1].toLowerCase();
+      if (flag === "-mobile" || flag === "mobile") {
+        mode = "mobile";
+      } else if (flag === "-pc" || flag === "pc") {
+        mode = "pc";
+      }
+    }
 
-                try {
-                        api.setMessageReaction("⏳", messageID, () => { }, true);
+    const apiUrl = `${await getApiBaseUrl()}/api/screenshot?url=${encodeURIComponent(url)}&mode=${mode}`;
 
-                        const apiUrlBase = await baseApiUrl();
-                        const finalUrl = `${apiUrlBase}/api/ss?url=${encodeURIComponent(urlInput)}`;
-                        
-                        const attachment = await global.utils.getStreamFromURL(finalUrl);
-                        
-                        api.sendMessage({ 
-                                body: getLang("success"), 
-                                attachment 
-                        }, threadID, (err) => {
-                                if (!err) {
-                                        api.setMessageReaction("🪽", messageID, () => { }, true);
-                                }
-                        }, messageID);
-
-                } catch (error) {
-                        api.setMessageReaction("❌", messageID, () => { }, true);
-                        console.error("SS Error:", error);
-                        api.sendMessage(getLang("error", error.message || "API Error"), threadID, messageID);
-                }
-        }
+    try {
+      const stream = await global.utils.getStreamFromURL(apiUrl);
+      return api.sendMessage({
+        body: `📸 Screenshot`,
+        attachment: stream
+      }, threadID, messageID);
+    } catch (error) {
+      console.error(error);
+      return api.sendMessage(`❌ Failed to capture screenshot. Please check the URL and try again.`, threadID, messageID);
+    }
+  }
 };

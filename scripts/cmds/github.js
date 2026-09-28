@@ -1,45 +1,101 @@
 const axios = require("axios");
+
+const API_CONFIG_URL = "https://raw.githubusercontent.com/goatbotnx/xalmanx210/refs/heads/main/apis.json";
+const API_KEY = "xalman-hub";
+let apiBaseUrl = null;
+let apiConfigRequest = null;
+
+async function getApiBaseUrl() {
+  if (apiBaseUrl) return apiBaseUrl;
+
+  if (!apiConfigRequest) {
+    apiConfigRequest = axios
+      .get(API_CONFIG_URL, { timeout: 15000 })
+      .then(({ data }) => {
+        const baseUrl = data?.[API_KEY];
+
+        if (typeof baseUrl !== "string" || !baseUrl.trim()) {
+          throw new Error(`Missing API key in apis.json: ${API_KEY}`);
+        }
+
+        apiBaseUrl = baseUrl.replace(/\/+$/, "");
+        return apiBaseUrl;
+      })
+      .finally(() => {
+        apiConfigRequest = null;
+      });
+  }
+
+  return apiConfigRequest;
+}
+
 module.exports = {
   config: {
     name: "github",
-    version: "0.0.1",
-    author: "Azadx69x",
-    countDown: 3,
+    version: "1.0",
+    author: "Shihab",
     role: 0,
-    shortDescription: "Get GitHub user info",
-    category: "owner",
-    guide: "{pn} <username>"
+    countDown: 5,
+    shortDescription: { en: "Fetch GitHub user profile and top repositories" },
+    category: "utility",
+    guide: { en: "{pn} <username>" }
   },
-  onStart: async function ({ api, event, args }) {
+
+  onStart: async function ({ api, event, args, message }) {
+    const username = args[0];
+    if (!username) {
+      return message.reply("❌ Please provide a GitHub username.\nExample: /github goatbotnx");
+    }
+
     try {
-      if (!args[0]) return api.sendMessage("⛔ 𝐏𝐥𝐞𝐚𝐬𝐞 𝐩𝐫𝐨𝐯𝐢𝐝𝐞 𝐚 𝐆𝐢𝐭𝐇𝐮𝐛 𝐮𝐬𝐞𝐫𝐧𝐚𝐦𝐞.", event.threadID, event.messageID);
-      const { data } = await axios.get(`https://azadx69x.is-a.dev/api/github?user=${encodeURIComponent(args[0])}`);
-      const d = data?.data?.data || data?.data;
-      if (!d) return api.sendMessage(`❌ 𝐍𝐨 𝐆𝐢𝐭𝐇𝐮𝐛 𝐮𝐬𝐞𝐫 𝐟𝐨𝐮𝐧𝐝: ${args[0]}`, event.threadID, event.messageID);
-      const username = data?.data?.user || d.user || d.login || args[0];
-      const formatDate = value => value ? new Date(value).toDateString() : "𝐍𝐨𝐧𝐞";
-      const msg = 
-`𝐆𝐢𝐭𝐇𝐮𝐛 𝐏𝐫𝐨𝐟𝐢𝐥𝐞 👀
-🧑‍💻 𝐍𝐚𝐦𝐞: ${d.name || "𝐍𝐨𝐧𝐞"}
-👤 𝐔𝐬𝐞𝐫: ${username}
-🏢 𝐂𝐨𝐦𝐩𝐚𝐧𝐲: ${d.company || "𝐍𝐨𝐧𝐞"}
-🌐 𝐁𝐥𝐨𝐠: ${d.blog || "𝐍𝐨𝐧𝐞"}
-📍 𝐋𝐨𝐜𝐚𝐭𝐢𝐨𝐧: ${d.location || "𝐍𝐨𝐧𝐞"}
-📧 𝐄𝐦𝐚𝐢𝐥: ${d.email || "𝐍𝐨𝐧𝐞"}
-📝 𝐁𝐢𝐨: ${d.bio || "𝐍𝐨𝐧𝐞"}
-🐦 𝐓𝐰𝐢𝐭𝐭𝐞𝐫: ${d.twitter || "𝐍𝐨𝐭 𝐬𝐞𝐭"}
-📦 𝐑𝐞𝐩𝐨𝐬: ${d.public_repos || 0}
-🗃 𝐆𝐢𝐬𝐭𝐬: ${d.public_gists || 0}
-👥 𝐅𝐨𝐥𝐥𝐨𝐰𝐞𝐫𝐬: ${d.followers || 0}
-👣 𝐅𝐨𝐥𝐥𝐨𝐰𝐢𝐧𝐠: ${d.following || 0}
-📆 𝐂𝐫𝐞𝐚𝐭𝐞𝐝: ${formatDate(d.created_at)}
-🔄 𝐔𝐩𝐝𝐚𝐭𝐞𝐝: ${formatDate(d.updated_at)}`;
-      const reply = { body: msg };
-      if (d.avatar) reply.attachment = await global.utils.getStreamFromURL(d.avatar);
-      await api.sendMessage(reply, event.threadID, event.messageID);
-    } catch (e) {
-      console.error(e);
-      api.sendMessage("❌ 𝐅𝐚𝐢𝐥𝐞𝐝 𝐭𝐨 𝐠𝐞𝐭 𝐆𝐢𝐭𝐇𝐮𝐛 𝐮𝐬𝐞𝐫 𝐢𝐧𝐟𝐨.", event.threadID, event.messageID);
+      const apiUrl = `${await getApiBaseUrl()}/api/github?user=${encodeURIComponent(username)}`;
+      const response = await axios.get(apiUrl, { timeout: 15000 });
+
+      if (!response.data.status) {
+        throw new Error("API returned error");
+      }
+
+      const data = response.data;
+      const profile = data.profile;
+      const repos = data.top_repositories || [];
+
+      let avatarStream = null;
+      try {
+        avatarStream = await global.utils.getStreamFromURL(profile.avatar);
+      } catch (e) {
+      }
+
+      let msg = `╭──〔 𝔾𝕀𝕋ℍ𝕌𝔹 ℙℝ𝕆𝔽𝕀𝕃𝔼 〕──╮\n`;
+      msg += `│ 👤 ${profile.name || profile.username}\n`;
+      msg += `│ 🆔 @${profile.username}\n`;
+      if (profile.bio) msg += `│ 📝 ${profile.bio}\n`;
+      msg += `│ 👥 Followers: ${profile.followers}\n`;
+      msg += `│ 📁 Repos: ${profile.public_repos}\n`;
+      msg += `│ 🔗 ${profile.link}\n`;
+      msg += `╰─────────────────────╯\n\n`;
+
+      if (repos.length > 0) {
+        msg += `╭──〔 𝕋𝕆ℙ ℝ𝔼ℙ𝕆𝕊𝕀𝕋𝕆ℝ𝕀𝔼𝕊 〕──╮\n`;
+        for (const repo of repos.slice(0, 5)) {
+          msg += `│ 📦 ${repo.repo_name}\n`;
+          msg += `│ ⭐ ${repo.stars}  🍴 ${repo.forks}  💻 ${repo.language || "Unknown"}\n`;
+          msg += `│ 🔗 ${repo.url}\n`;
+          if (repos.indexOf(repo) < repos.length - 1) msg += `│ ──────────────────\n`;
+        }
+        msg += `╰─────────────────────╯`;
+      } else {
+        msg += `❌ No public repositories found.`;
+      }
+
+      const attachments = avatarStream ? [avatarStream] : [];
+      return message.reply({
+        body: msg,
+        attachment: attachments
+      });
+
+    } catch (error) {
+      console.error(error);
+      return message.reply(`❌ Failed to fetch GitHub profile for "${username}".\nError: ${error.message || "Unknown error"}`);
     }
   }
 };

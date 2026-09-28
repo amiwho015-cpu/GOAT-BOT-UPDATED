@@ -1,94 +1,132 @@
-const multiAccountManager = require("../../bot/login/multiAccountManager.js");
-
 module.exports = {
-	config: {
-		name: "account",
-		version: "1.0",
-		author: "frnAlt",
-		countDown: 5,
-		role: 2, // Bot admin only
-		description: {
-			en: "Manage multiple accounts and check status"
-		},
-		category: "system",
-		guide: {
-			en: "{pn} status - Check multi-account status\n{pn} switch - Switch to next account\n{pn} reset - Reset failed accounts"
-		}
-	},
+  config: {
+    name: "account",
+    aliases: ["acc"],
+    version: "2.0",
+    author: "Shihab",
+    countDown: 5,
+    role: 4,
+    shortDescription: "Switch bot account",
+    longDescription: "Switch between account.txt and account2.txt",
+    category: "system",
+    guide: {
+      en: "{pn} [1|2]"
+    }
+  },
 
-	langs: {
-		en: {
-			statusTitle: "📊 Multi-Account Status",
-			totalAccounts: "Total accounts: %1",
-			currentAccount: "Current account: %1",
-			availableAccounts: "Available accounts: %1",
-			failedAccounts: "Failed accounts: %1",
-			switchCount: "Switch count: %1",
-			canSwitch: "Can switch: %1",
-			switching: "🔄 Switching to next account...",
-			switchSuccess: "✅ Account switch initiated",
-			switchFailed: "❌ Failed to switch account",
-			resetSuccess: "✅ Failed accounts reset",
-			noPermission: "❌ You don't have permission to use this command",
-			invalidUsage: "❌ Invalid usage. Use: status, switch, or reset"
-		}
-	},
+  onStart: async function ({ api, event, args }) {
+    const fs = require("fs-extra");
+    const path = require("path");
 
-	onStart: async function ({ message, args, getLang }) {
-		const action = args[0]?.toLowerCase();
+    const baseDir = path.dirname(global.client.dirAccount);
+    const files = ["account.txt", "account2.txt"];
 
-		switch (action) {
-			case "status": {
-				const stats = multiAccountManager.getStats();
-				const statusMsg = [
-					getLang("statusTitle"),
-					"━━━━━━━━━━━━━━━",
-					getLang("totalAccounts", stats.totalAccounts),
-					getLang("currentAccount", stats.currentAccount || "None"),
-					getLang("availableAccounts", stats.availableAccounts.join(", ") || "None"),
-					getLang("failedAccounts", stats.failedAccounts.join(", ") || "None"),
-					getLang("switchCount", stats.switchCount),
-					getLang("canSwitch", stats.canSwitch ? "Yes" : "No (cooldown)"),
-					"━━━━━━━━━━━━━━━"
-				].join("\n");
-				return await message.reply(statusMsg);
-			}
+    if (!args[0]) {
+      const current =
+        typeof global.GoatBot.getCurrentAccount === "function"
+          ? global.GoatBot.getCurrentAccount()
+          : {
+              file: null,
+              account: null,
+              accountId: null
+            };
 
-			case "switch": {
-				await message.reply(getLang("switching"));
-				const { switchToNextAccount } = global.GoatBot.reLoginBot ? 
-					require("../../bot/login/login.js") : { switchToNextAccount: null };
-				
-				if (global.switchToNextAccount) {
-					const result = await global.switchToNextAccount("Manual switch by admin");
-					if (result) {
-						return await message.reply(getLang("switchSuccess"));
-					} else {
-						return await message.reply(getLang("switchFailed"));
-					}
-				} else {
-					// Fallback: trigger account switch via global
-					multiAccountManager.isSwitching = true;
-					const nextAccount = multiAccountManager.nextAccount();
-					global.client.dirAccount = nextAccount;
-					
-					setTimeout(() => {
-						multiAccountManager.isSwitching = false;
-						global.GoatBot.reLoginBot();
-					}, 3000);
-					
-					return await message.reply(getLang("switchSuccess"));
-				}
-			}
+      if (!current.file) {
+        return api.sendMessage(
+          "ℹ️ Currently using account: Unknown\n📄 File: Unknown",
+          event.threadID
+        );
+      }
 
-			case "reset": {
-				multiAccountManager.resetFailedAccounts();
-				return await message.reply(getLang("resetSuccess"));
-			}
+      return api.sendMessage(
+        `ℹ️ Currently using account: ${current.account}\n📄 File: ${current.file}\n🆔 ID: ${current.accountId || "Unknown"}`,
+        event.threadID
+      );
+    }
 
-			default: {
-				return await message.reply(getLang("invalidUsage"));
-			}
-		}
-	}
+    const choice = Number(args[0]);
+
+    if (choice !== 1 && choice !== 2) {
+      return api.sendMessage(
+        "❌ Invalid account number.\nUse: /account 1 or /account 2",
+        event.threadID
+      );
+    }
+
+    const selectedFile = files[choice - 1];
+    const selectedPath = path.join(
+      baseDir,
+      selectedFile
+    );
+
+    try {
+      if (!fs.existsSync(selectedPath)) {
+        return api.sendMessage(
+          `❌ ${selectedFile} does not exist!`,
+          event.threadID
+        );
+      }
+
+      const content = fs
+        .readFileSync(selectedPath, "utf8")
+        .trim();
+
+      if (!content) {
+        return api.sendMessage(
+          `❌ ${selectedFile} is empty!`,
+          event.threadID
+        );
+      }
+
+      if (
+        !content.includes("c_user") &&
+        !content.includes("EAAAA")
+      ) {
+        return api.sendMessage(
+          `❌ ${selectedFile} does not contain a valid account session!`,
+          event.threadID
+        );
+      }
+
+      if (
+        typeof global.GoatBot.switchAccount !==
+        "function"
+      ) {
+        return api.sendMessage(
+          "❌ Account switching system is not available.",
+          event.threadID
+        );
+      }
+
+      await api.sendMessage(
+        `🔄 Switching to account ${choice}\n📄 File: ${selectedFile}\n⏳ Logging in...`,
+        event.threadID
+      );
+
+      await global.GoatBot.switchAccount(
+        choice
+      );
+
+      const current =
+        typeof global.GoatBot.getCurrentAccount ===
+        "function"
+          ? global.GoatBot.getCurrentAccount()
+          : null;
+
+      return api.sendMessage(
+        `✅ Account switched successfully!\n\n👤 Account: ${choice}\n📄 File: ${selectedFile}\n🆔 ID: ${current?.accountId || "Unknown"}`,
+        event.threadID
+      );
+    } catch (err) {
+      console.error(
+        "Account switch error:",
+        err
+      );
+
+      return api.sendMessage(
+        `❌ Failed to switch account.\n\nReason: ${err.message}`,
+        event.threadID
+      );
+    }
+  }
 };

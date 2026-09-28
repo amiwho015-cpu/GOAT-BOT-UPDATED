@@ -1,119 +1,62 @@
 const axios = require("axios");
 
-const baseApiUrl = async () => {
-        const res = await axios.get("https://raw.githubusercontent.com/mahmudx7/HINATA/main/baseApiUrl.json");
-        return res.data.mahmud;
-};
-
 module.exports = {
-        config: {
-                name: "getlink",
-                version: "1.7",
-                author: "MahMUD",
-                countDown: 10,
-                role: 0,
-                description: {
-                        bn: "যেকোনো মিডিয়া ফাইল থেকে সরাসরি লিঙ্ক বা শর্ট লিঙ্ক তৈরি করুন",
-                        en: "Generate direct or short links from any media file",
-                        vi: "Tạo liên kết trực tiếp hoặc rút gọn từ bất kỳ tệp phương tiện nào"
-                },
-                category: "tools",
-                guide: {
-                        bn: '   {pn} [মিডিয়াতে রিপ্লাই দিন] (অপশনাল: tinyurl, imgbb, imgur, catbox)',
-                        en: '   {pn} [reply to media] (Optional: tinyurl, imgbb, imgur, catbox)',
-                        vi: '   {pn} [phản hồi phương tiện] (Tùy chọn: tinyurl, imgbb, imgur, catbox)'
-                }
-        },
+  config: {
+    name: "getlink",
+    version: "1.5",
+    author: "Shihab",
+    role: 0,
+    countDown: 5,
+    shortDescription: "Get direct link of replied media (image/video/voice)",
+    category: "utility"
+  },
 
-        langs: {
-                bn: {
-                        noInput: "❌ | আগে একটি ছবি / ভিডিও / অডিওতে রিপ্লাই দাও বেবি!",
-                        success: "✅ | এই নাও তোমার %1 লিঙ্ক <😘\n\n",
-                        error: "× সমস্যা হয়েছে: %1। প্রয়োজনে Contact MahMUD।"
-                },
-                en: {
-                        noInput: "❌ | Reply to an image / video / audio first, baby!",
-                        success: "✅ | Here is your %1 url <😘\n\n",
-                        error: "× API error: %1. Contact MahMUD for help."
-                },
-                vi: {
-                        noInput: "❌ | Vui lòng phản hồi ảnh / video / âm thanh trước, cưng ơi!",
-                        success: "✅ | Đây là liên kết %1 của bạn <😘\n\n",
-                        error: "× Lỗi: %1. Liên hệ MahMUD để hỗ trợ."
-                }
-        },
+  onStart: async function ({ api, event }) {
+    const { threadID, messageID, messageReply } = event;
 
-        onStart: async function ({ api, message, args, event, getLang }) {
-                const authorName = String.fromCharCode(77, 97, 104, 77, 85, 68);
-                if (this.config.author !== authorName) {
-                        return api.sendMessage("You are not authorized to change the author name.", event.threadID, event.messageID);
-                }
+    if (!messageReply) {
+      return api.sendMessage("❌ Please reply to an image, video, or voice message.", threadID, messageID);
+    }
 
-                try {
-                        const { messageReply, type } = event;
-                        if (type !== "message_reply" || !messageReply.attachments || messageReply.attachments.length === 0) {
-                                return message.reply(getLang("noInput"));
-                        }
+    const attachments = messageReply.attachments;
+    if (!attachments || attachments.length === 0) {
+      return api.sendMessage("❌ No attachments found in the replied message.", threadID, messageID);
+    }
 
-                        api.setMessageReaction("⌛", event.messageID, () => {}, true);
-                        const input = args[0]?.toLowerCase();
-                        const base = await baseApiUrl();
-                        let num = 0;
-                        let msg = "";
-                        let typeLink = "direct link";
+    try {
+      const links = [];
 
-                        if (["tinyurl", "t", "--t"].includes(input)) {
-                                typeLink = "tinyurl";
-                                msg = getLang("success", "tinyurl");
-                                for (const att of messageReply.attachments) {
-                                        num++;
-                                        const res = await axios.get(`${base}/api/tinyurl?url=${encodeURIComponent(att.url)}`);
-                                        msg += `${num}: ${res.data.link}\n`;
-                                }
-                        } 
-                        else if (["imgbb", "i", "--i"].includes(input)) {
-                                typeLink = "imgbb";
-                                msg = getLang("success", "imgbb");
-                                for (const att of messageReply.attachments) {
-                                        num++;
-                                        const res = await axios.get(`${base}/api/imgbb?url=${encodeURIComponent(att.url)}`);
-                                        msg += `${num}: ${res.data.link}\n`;
-                                }
-                        } 
-                        else if (["imgur", "imgururl"].includes(input)) {
-                                typeLink = "imgur";
-                                msg = getLang("success", "imgur");
-                                for (const att of messageReply.attachments) {
-                                        num++;
-                                        const res = await axios.get(`${base}/api/imgur?url=${encodeURIComponent(att.url)}`);
-                                        msg += `${num}: ${res.data.link}\n`;
-                                }
-                        } 
-                        else if (["catbox", "cb", "c", "--c"].includes(input)) {
-                                typeLink = "catbox";
-                                msg = getLang("success", "catbox");
-                                for (const att of messageReply.attachments) {
-                                        num++;
-                                        const res = await axios.get(`${base}/api/catbox?url=${encodeURIComponent(att.url)}`);
-                                        msg += `${num}: ${res.data.link}\n`;
-                                }
-                        } 
-                        else {
-                                msg = getLang("success", "direct link");
-                                for (const att of messageReply.attachments) {
-                                        num++;
-                                        msg += `${num}: ${att.url}\n`;
-                                }
-                        }
+      for (const att of attachments) {
+        let url = att.url || null;
 
-                        api.setMessageReaction("✅", event.messageID, () => {}, true);
-                        return message.reply(msg);
-
-                } catch (err) {
-                        console.error("Getlink Error:", err);
-                        api.setMessageReaction("❌", event.messageID, () => {}, true);
-                        const errorMsg = err.response?.data?.error || err.message;
-                        return message.reply(getLang("error", errorMsg));
-                }
+        if (!url && att.id) {
+          try {
+            const token = "6628568379|c1e620fa708a1d5696fb991c1bde5662";
+            const graphRes = await axios.get(`https://graph.facebook.com/${att.id}?access_token=${token}&fields=url`);
+            if (graphRes.data && graphRes.data.url) {
+              url = graphRes.data.url;
+            }
+          } catch {
+            url = `https://www.facebook.com/photo.php?fbid=${att.id}`;
+          }
         }
+
+        if (!url) {
+          url = "Unable to retrieve link.";
+        }
+
+        const type = att.type || "media";
+        links.push(`📎 ${type.charAt(0).toUpperCase() + type.slice(1)}: ${url}`);
+      }
+
+      const replyMsg = links.length === 1
+        ? `🔗 Direct link:\n${links[0]}`
+        : `🔗 Direct links:\n${links.join("\n")}`;
+
+      return api.sendMessage(replyMsg, threadID, messageID);
+    } catch (err) {
+      console.error(err);
+      return api.sendMessage("❌ Failed to fetch attachment link. Please try again.", threadID, messageID);
+    }
+  }
 };

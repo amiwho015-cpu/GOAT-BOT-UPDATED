@@ -1,87 +1,80 @@
 module.exports = {
-        config: {
-                name: "tag",
-                version: "1.7",
-                author: "MahMUD",
-                countDown: 0,
-                role: 0,
-                category: "utility",
-                guide: {
-                        en: "{pn} [reply/@mention/name] [text]",
-                        bn: "{pn} [রিপ্লাই/@মেনশন/নাম] [টেক্সট]",
-                        vi: "{pn} [phản hồi/@mention/tên] [văn bản]"
-                }
-        },
+  config: {
+    name: "tag",
+    version: "3.0",
+    category: "box chat",
+    role: 0,
+    author: "Shihab",
+    countDown: 3,
+    description: {
+      en: "Real mention users"
+    },
+    guide: {
+      en: "{pm}tag [name]\n{pm}tag all\nReply + {pm}tag"
+    }
+  },
 
-        langs: {
-                bn: {
-                        no_user: "❌ এই গ্রুপে এই নামের কাউকে পাওয়া যায়নি!",
-                        guide_msg: "⚠️ অনুগ্রহ করে রিপ্লাই দিন, মেনশন করুন অথবা নাম লিখুন!",
-                        error: "❌ একটি সমস্যা হয়েছে: %1"
-                },
-                en: {
-                        no_user: "❌ User not found in this group!",
-                        guide_msg: "⚠️ Please reply, mention, or type a name!",
-                        error: "❌ Error occurred: %1"
-                },
-                vi: {
-                        no_user: "❌ Không tìm thấy người dùng trong nhóm này!",
-                        guide_msg: "⚠️ Vui lòng phản hồi, gắn thẻ hoặc nhập tên!",
-                        error: "❌ Đã xảy ra lỗi: %1"
-                }
-        },
+  onStart: async ({ api, event, usersData, threadsData, args }) => {
+    const { threadID, messageID, messageReply } = event;
 
-        onStart: async function ({ api, event, args, getLang }) {
-                const authorName = String.fromCharCode(77, 97, 104, 77, 85, 68);
-                if (this.config.author !== authorName) {
-                        return api.sendMessage("You are not authorized to change the author name.", event.threadID, event.messageID);
-                }
+    try {
+      const threadData = await threadsData.get(threadID);
+      const members = threadData.members
+        .filter(m => m.inGroup === true)
+        .map(m => ({
+          name: m.name || "User",
+          id: m.userID
+        }));
 
-                try {
-                        const { threadID, messageID, messageReply, mentions } = event;
-                        let uid;
-                        let text = args.join(" ");
+      let tagUsers = [];
 
-                        if (messageReply) {
-                                uid = messageReply.senderID;
-                        }
-
-                        else if (Object.keys(mentions).length > 0) {
-                                uid = Object.keys(mentions)[0];    
-                                text = text.replace(/@\S+/g, "").trim();
-                        }
-
-                        else if (args.length > 0) {
-                                const nameInput = args[0].toLowerCase();
-                                const threadInfo = await api.getThreadInfo(threadID);
-                                const member = threadInfo.userInfo.find(u =>
-                                        u.name.toLowerCase().includes(nameInput)
-                                );
-
-                                if (!member) return api.sendMessage(getLang("no_user"), threadID, messageID);
-
-                                uid = member.id;
-                                text = args.slice(1).join(" ");
-                        }
-
-                        else {
-                                return api.sendMessage(getLang("guide_msg"), threadID, messageID);
-                        }
-
-                        const userInfo = await api.getUserInfo(uid);
-                        const name = userInfo[uid]?.name || "User";
-
-                        return api.sendMessage({
-                                body: `${name} ${text}`,
-                                mentions: [{
-                                        tag: name,
-                                        id: uid
-                                }]
-                        }, threadID, messageID);
-
-                } catch (e) {
-                        console.log(e);
-                        return api.sendMessage(getLang("error", e.message), event.threadID, event.messageID);
-                }
+      if (messageReply) {
+        const uid = messageReply.senderID;
+        const name = (await usersData.getName(uid)) || "User";
+        tagUsers.push({ name, id: uid });
+      } else if (args[0] && ["all", "cdi", "everyone"].includes(args[0].toLowerCase())) {
+        tagUsers = members;
+      } else {
+        if (!args[0]) {
+          return api.sendMessage("⚠️ Mention user or reply.", threadID, messageID);
         }
+
+        const searchName = args[0].toLowerCase();
+        tagUsers = members.filter(m => m.name.toLowerCase().includes(searchName));
+
+        if (tagUsers.length === 0) {
+          return api.sendMessage("❌ User Not Found", threadID, messageID);
+        }
+      }
+
+      const mentions = [];
+      const nameTags = [];
+      const nameCount = {};
+
+      for (const u of tagUsers) {
+        let tag = `@${u.name}`;
+
+        if (nameCount[u.name]) {
+          tag += "\u200B".repeat(nameCount[u.name]);
+          nameCount[u.name]++;
+        } else {
+          nameCount[u.name] = 1;
+        }
+
+        nameTags.push(tag);
+        mentions.push({ tag: tag, id: u.id });
+      }
+
+      const body = nameTags.join(" ");
+
+      return api.sendMessage(
+        { body, mentions },
+        threadID,
+        messageReply ? messageReply.messageID : messageID
+      );
+
+    } catch (err) {
+      return api.sendMessage("❌ Error: " + err.message, threadID, messageID);
+    }
+  }
 };

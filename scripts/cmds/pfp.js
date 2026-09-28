@@ -1,86 +1,95 @@
-function getUrl(value) {
-  if (!value) return null;
-  if (typeof value === "string") return value;
-  if (typeof value !== "object") return null;
+const axios = require("axios");
+const fs = require("fs");
+const path = require("path");
 
-  for (const key of ["uri", "url", "source"]) {
-    if (typeof value[key] === "string") return value[key];
+const ACCESS_TOKEN = "350685531728|62f8ce9f74b12f84c123cc23437a4a32";
+
+function extractUID(link) {
+  try {
+    const url = new URL(link);
+    if (url.pathname.includes("profile.php")) {
+      const params = new URLSearchParams(url.search);
+      return params.get("id");
+    } else {
+      return url.pathname.replace(/\//g, ""); 
+    }
+  } catch {
+    return null;
   }
-
-  return getUrl(value.photo) || getUrl(value.image);
 }
 
-function runWithTimeout(task, timeout = 8000) {
-  return new Promise(resolve => {
-    let settled = false;
-    const finish = value => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      resolve(value);
-    };
+async function getUIDFromProfileLink(link) {
+  const uidOrUsername = extractUID(link);
+  if (!uidOrUsername) return null;
 
-    const timer = setTimeout(() => finish(null), timeout);
-    Promise.resolve().then(task).then(finish, () => finish(null));
-  });
-}
-
-async function getFirstStream(urls) {
-  if (!global.utils?.getStreamFromURL) return null;
-
-  for (const url of urls.filter(Boolean)) {
-    const stream = await runWithTimeout(
-      () => global.utils.getStreamFromURL(url, "", { timeout: 12000 }),
-      15000
+  try {
+    const res = await axios.get(
+      `https://graph.facebook.com/${uidOrUsername}?access_token=${ACCESS_TOKEN}`
     );
-    if (stream) return stream;
+    return res.data.id;
+  } catch (err) {
+    return null;
   }
+}
 
-  return null;
+async function handlePFP({ api, event, message, args }) {
+  const { senderID, mentions, type, messageReply, messageID } = event;
+  let userId;
+
+  try {
+    api.setMessageReaction("🕧", messageID, () => {}, true);
+
+    if (mentions && Object.keys(mentions).length > 0) {
+      userId = Object.keys(mentions)[0];
+    }
+    else if (type === "message_reply" && messageReply) {
+      userId = messageReply.senderID;
+    }
+    else if (args[0] && args[0].startsWith("http")) {
+      userId = await getUIDFromProfileLink(args[0]);
+      if (!userId) return message.reply("");
+    }
+    else if (args[0] && /^\d+$/.test(args[0])) {
+      userId = args[0];
+    }
+    else {
+      userId = senderID;
+    }
+
+    const fbURL = `https://graph.facebook.com/${userId}/picture?width=512&height=512&access_token=${ACCESS_TOKEN}`;
+
+    const res = await axios.get(fbURL, { responseType: "arraybuffer" });
+
+    const imgPath = path.join(__dirname, `pfp_${userId}.png`);
+    fs.writeFileSync(imgPath, res.data);
+
+    await message.reply({
+      body: "✨ 𝑯𝑒𝑟𝑒'𝑠 𝑡ℎ𝑒 𝑝𝑟𝑜𝑓𝑖𝑙𝑒 𝑝𝑖𝑐𝑡𝑢𝑟𝑒 🌬️",
+      attachment: fs.createReadStream(imgPath)
+    });
+
+    fs.unlinkSync(imgPath);
+    api.setMessageReaction("✅", messageID, () => {}, true);
+
+  } catch (err) {
+    console.error(err);
+    api.setMessageReaction("❌", messageID, () => {}, true);
+    message.reply("");
+  }
 }
 
 module.exports = {
   config: {
-    name: "pfp",
-    aliases: ["pp"],
-    version: "0.0.8",
-    author: "Azadx69x",
-    countDown: 3,
+    name: "pp",
+    aliases: ["pfp"],
+    version: "3.0",
+    author: "Shihab",
     role: 0,
-    shortDescription: "Show profile picture.",
-    longDescription: "Get the profile picture of yourself or any user",
-    category: "image",
-    guide: {
-      en: "{pn}[@tag | reply | uid]"
-    }
+    shortDescription: { en: "Show profile picture by UID, mention or link" },
+    category: "image"
   },
 
-  onStart: async function ({ event, message, args, usersData }) {
-    try {
-      const targetID =
-        (event.type === "message_reply" && event.messageReply?.senderID) ||
-        (event.mentions && Object.keys(event.mentions)[0]) ||
-        (args[0] && !isNaN(args[0]) && args[0]) ||
-        event.senderID;
-
-      const avatarURL = await runWithTimeout(
-        () => usersData?.getAvatarUrl?.(targetID),
-        15000
-      );
-      const profileStream = await getFirstStream([getUrl(avatarURL)]);
-
-      if (!profileStream) {
-        return message.reply(
-          "❌ Could not fetch profile picture."
-        );
-      }
-
-      return message.reply({
-        attachment: profileStream
-      });
-    } catch (error) {
-      console.error("pfp command error:", error);
-      return message.reply("❌ Could not fetch profile photos.");
-    }
+  onStart: async function ({ api, event, message, args }) {
+    await handlePFP({ api, event, message, args });
   }
 };

@@ -1,76 +1,143 @@
 const axios = require("axios");
 
-const baseApiUrl = async () => {
-        const base = await axios.get("https://raw.githubusercontent.com/mahmudx7/HINATA/main/baseApiUrl.json");
-        return base.data.mahmud;
-};
+const API_CONFIG_URL = "https://raw.githubusercontent.com/goatbotnx/xalmanx210/refs/heads/main/apis.json";
+const API_KEY = "xalman-hub";
+let apiBaseUrl = null;
+let apiConfigRequest = null;
+
+async function getApiBaseUrl() {
+  if (apiBaseUrl) return apiBaseUrl;
+
+  if (!apiConfigRequest) {
+    apiConfigRequest = axios
+      .get(API_CONFIG_URL, { timeout: 15000 })
+      .then(({ data }) => {
+        const baseUrl = data?.[API_KEY];
+
+        if (typeof baseUrl !== "string" || !baseUrl.trim()) {
+          throw new Error(`Missing API key in apis.json: ${API_KEY}`);
+        }
+
+        apiBaseUrl = baseUrl.replace(/\/+$/, "");
+        return apiBaseUrl;
+      })
+      .finally(() => {
+        apiConfigRequest = null;
+      });
+  }
+
+  return apiConfigRequest;
+}
+
+const MAX_RETRIES = 3;
 
 module.exports = {
-        config: {
-                name: "copuledp2",
-                aliases: ["cdp2"],
-                version: "1.7",
-                author: "MahMUD",
-                countDown: 10,
-                role: 0,
-                description: {
-                        bn: "নিব্বা-নিব্বিদের জন্য রেন্ডম কাপল ডিপি পান (ভার্সন ২)",
-                        en: "Fetch a random couple DP for nibba and nibbi (v2)"
-                },
-                category: "image",
-                guide: {
-                        bn: '   {pn}: রেন্ডম কাপল ডিপি (২) পেতে ব্যবহার করুন',
-                        en: '   {pn}: Use to get a random couple DP (v2)'
-                }
-        },
+  config: {
+    name: "coupledp2",
+    aliases: ["cdp2", "k-pop"],
+    version: "2.1",
+    author: "Shihab",
+    description: "Random K-Pop Matching Couple DP",
+    category: "LOVE",
+    cooldown: 5,
+    guide: {
+      en: "{pn} - Random K-Pop Couple DP\n{pn} list - Show total available Couple DPs"
+    }
+  },
 
-        langs: {
-                bn: {
-                        notFound: "× কাপল ডিপি খুঁজে পাওয়া যায়নি। পরে চেষ্টা করো বেবি!",
-                        success: "এই নাও তোমার কাপল ডিপি বেবি <😘",
-                        error: "× ডিপি আনতে সমস্যা হয়েছে: %1। প্রয়োজনে Contact MahMUD।"
-                },
-                en: {
-                        notFound: "× Couldn't fetch couple DP. Try again later baby!",
-                        success: "Here is your cdp baby <😘",
-                        error: "× API error: %1. Contact MahMUD for help."
-                }
-        },
+  onStart: async function ({ api, event, args }) {
+    const API_URL = `${await getApiBaseUrl()}/api/cdp2`;
+    const { threadID, messageID } = event;
 
-        onStart: async function ({ api, message, event, getLang }) {
-                const authorName = String.fromCharCode(77, 97, 104, 77, 85, 68);
-                if (this.config.author !== authorName) {
-                        return api.sendMessage("You are not authorized to change the author name.", event.threadID, event.messageID);
-                }
+    if (args[0]?.toLowerCase() === "list") {
+      try {
+        const { data } = await axios.get(`${API_URL}?type=list`, {
+          timeout: 8000
+        });
 
-                try {
-                        const baseUrl = await baseApiUrl();
-                        const response = await axios.get(`${baseUrl}/api/cdp2`, {
-                                headers: { "author": authorName }
-                        });
+        if (!data?.status) throw new Error();
 
-                        if (response.data.error) {
-                                return message.reply(response.data.error);
-                        }
+        return api.sendMessage(
+`╭━━━〔 💕 〕━━━╮
+      𝗞-𝗣𝗢𝗣 𝗖𝗢𝗨𝗣𝗟𝗘
+━━━━━━━━━━━━━━━
+📦 Total Collection
+✨ ${data.total_cdp}
+╰━━━〔 💖 〕━━━╯`,
+          threadID,
+          messageID
+        );
+      } catch {
+        return api.sendMessage(
+          "❌ | Failed to fetch Couple DP list.",
+          threadID,
+          messageID
+        );
+      }
+    }
 
-                        const { male, female } = response.data;
-                        if (!male || !female) {
-                                return message.reply(getLang("notFound"));
-                        }
+    api.setMessageReaction("⏳", messageID, () => {}, true);
 
-                        const attachments = [
-                                await global.utils.getStreamFromURL(male),
-                                await global.utils.getStreamFromURL(female)
-                        ];
+    const headers = {
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+      Accept: "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+      Referer: "https://imgur.com/"
+    };
 
-                        return message.reply({
-                                body: getLang("success"),
-                                attachment: attachments
-                        });
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const { data } = await axios.get(API_URL, {
+          timeout: 10000
+        });
 
-                } catch (err) {
-                        console.error("CDP2 Fetch Error:", err);
-                        return message.reply(getLang("error", err.message));
-                }
+        if (!data?.pair?.boy || !data?.pair?.girl) throw new Error();
+
+        const [boy, girl] = await Promise.all([
+          axios.get(data.pair.boy, {
+            responseType: "stream",
+            timeout: 15000,
+            headers
+          }),
+          axios.get(data.pair.girl, {
+            responseType: "stream",
+            timeout: 15000,
+            headers
+          })
+        ]);
+
+        await api.sendMessage(
+          {
+            body:
+`╭━━━〔 💕 〕━━━╮
+      𝗞-𝗣𝗢𝗣 𝗖𝗢𝗨𝗣𝗟𝗘
+━━━━━━━━━━━━━━━
+💞 Matching Couple DP
+✨ Random Collection
+╰━━━〔 💖 〕━━━╯`,
+            attachment: [boy.data, girl.data]
+          },
+          threadID
+        );
+
+        api.setMessageReaction("✅", messageID, () => {}, true);
+        return;
+
+      } catch {
+        if (attempt === MAX_RETRIES) {
+          api.setMessageReaction("❌", messageID, () => {}, true);
+
+          return api.sendMessage(
+            "❌ | Failed to fetch matching Couple DP.\nPlease try again later.",
+            threadID,
+            messageID
+          );
         }
+
+        await new Promise(resolve =>
+          setTimeout(resolve, attempt * 2000)
+        );
+      }
+    }
+  }
 };

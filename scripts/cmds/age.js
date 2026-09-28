@@ -1,73 +1,61 @@
-const axios = require("axios");
-
-const mahmud = async () => {
-        const base = await axios.get("https://raw.githubusercontent.com/mahmudx7/exe/main/baseApiUrl.json");
-        return base.data.mahmud;
-};
+const moment = require("moment-timezone");
 
 module.exports = {
-        config: {
-                name: "age",
-                aliases: ["বয়স"],
-                version: "1.7",
-                author: "MahMUD",
-                countDown: 5,
-                role: 0,
-                description: {
-                        bn: "আপনার জন্ম তারিখ দিয়ে বর্তমান বয়স ক্যালকুলেট করুন",
-                        en: "Calculate your current age using date of birth",
-                        vi: "Tính tuổi hiện tại của bạn bằng ngày sinh"
-                },
-                category: "utility",
-                guide: {
-                        bn: '   {pn} <YYYY-MM-DD>: (যেমন: {pn} 2002-05-15)',
-                        en: '   {pn} <YYYY-MM-DD>: (Ex: {pn} 2002-05-15)',
-                        vi: '   {pn} <YYYY-MM-DD>: (VD: {pn} 2002-05-15)'
-                }
-        },
+  config: {
+    name: "age",
+    version: "4.0.",
+    author: "Shihab",
+    countDown: 5,
+    role: 0,
+    shortDescription: "Age Checker",
+    longDescription: "View age stats details.",
+    category: "utility",
+    guide: { en: "{pn} [DD-MM-YYYY]" }
+  },
 
-        langs: {
-                bn: {
-                        noInput: "× বেবি, তোমার জন্ম তারিখ দাও!\n\nউদাহরণ: {pn} 2002-05-15",
-                        error: "× সমস্যা হয়েছে: %1। প্রয়োজনে Contact MahMUD।"
-                },
-                en: {
-                        noInput: "× Baby, please provide your date of birth\n\nExample: {pn} 2002-05-15",
-                        error: "× API error: %1. Contact MahMUD for help."
-                },
-                vi: {
-                        noInput: "× Cưng ơi, vui lòng cung cấp ngày sinh\n\nVí dụ: {pn} 2002-05-15",
-                        error: "× Lỗi: %1. Liên hệ MahMUD để hỗ trợ."
-                }
-        },
+  onStart: async function ({ api, event, args, usersData }) {
+    const { threadID, messageID, senderID } = event;
 
-        onStart: async function ({ api, event, args, message, getLang }) {
-                const authorName = String.fromCharCode(77, 97, 104, 77, 85, 68);
-                if (this.config.author !== authorName) {
-                        return api.sendMessage("You are not authorized to change the author name.", event.threadID, event.messageID);
-                }
+    if (!args[0]) {
+      return api.sendMessage("『 SYSTEM-ERROR 』\n\n➤ Please provide DOB (DD-MM-YYYY)\n➤ Example: .age 18-05-2006", threadID, messageID);
+    }
 
-                const dob = args[0];
-                if (!dob) return message.reply(getLang("noInput"));
+    const birthDate = moment.tz(args[0], "DD-MM-YYYY", true, "Asia/Dhaka");
+    if (!birthDate.isValid()) {
+      return api.sendMessage("❌ FORMAT_INVALID: Use DD-MM-YYYY", threadID, messageID);
+    }
 
-                try {
-                        api.setMessageReaction("⏳", event.messageID, () => {}, true);
-                        
-                        const apiBase = await mahmud();
-                        const res = await axios.get(`${apiBase}/api/age/font3?dob=${dob}`);
+    const now = moment.tz("Asia/Dhaka");
+    const age = moment.duration(now.diff(birthDate));
 
-                        if (res.data && res.data.error) {
-                                return message.reply(res.data.error);
-                        }
+    const Y = age.years();
+    const M = age.months();
+    const D = age.days();
+    const totalDays = Math.floor(now.diff(birthDate, "days"));
+    const totalSecs = Math.floor(now.diff(birthDate, "seconds"));
 
-                        api.setMessageReaction("✅", event.messageID, () => {}, true);
-                        return message.reply(res.data.message);
+    const nextBday = birthDate.clone().year(now.year());
+    if (nextBday.isBefore(now)) nextBday.add(1, 'year');
+    const dLeft = nextBday.diff(now, 'days');
 
-                } catch (err) {
-                        console.error("Age Error:", err);
-                        api.setMessageReaction("❌", event.messageID, () => {}, true);
-                        const errorMsg = err.response?.data?.error || err.message;
-                        return message.reply(getLang("error", errorMsg));
-                }
-        }
+    const ratingArr = ["S-Rank", "A-Rank", "God-Tier", "Legendary", "Elite", "Supreme"];
+    const randomRating = ratingArr[Math.floor(Math.random() * ratingArr.length)];
+
+    const response = 
+      `┌───  [ 𝗔𝗚𝗘 𝗗𝗘𝗧𝗘𝗖𝗧𝗢𝗥 ]  ───\n` +
+      `├──────────────────\n` +
+      `│ ✨ 𝗬𝗲𝗮𝗿𝘀: ${Y} \n` +
+      `│ ✨ 𝗠𝗼𝗻𝘁𝗵𝘀: ${M} \n` +
+      `│ ✨ 𝗗𝗮𝘆𝘀: ${D} \n` +
+      `├──────────────────\n` +
+      `│ 📊 𝗧𝗼𝘁𝗮𝗹 𝗟𝗶𝗳𝗲𝘀𝗽𝗮𝗻:\n` +
+      `│ • Days: ${totalDays.toLocaleString()}\n` +
+      `│ • Second: ${totalSecs.toLocaleString()}\n` +
+      `├──────────────────\n` +
+      `│ 🎯 𝗡𝗲𝘅𝘁 𝗘𝘃𝗲𝗻𝘁: ${dLeft} Days Left\n` +
+      `│ 🎖️ 𝗨𝘀𝗲𝗿 𝗥𝗮𝗻𝗸: ${randomRating}\n` +
+      `└──────────────────\n` ;
+
+    return api.sendMessage(response, threadID, messageID);
+  }
 };
