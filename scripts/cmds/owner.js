@@ -47,11 +47,11 @@ module.exports = {
 
     const ownerName = "Negative Xalman";
     const ownerAge = "18";
-    const fbName = "Maybe NX";
-    const messenger = "https://www.facebook.com/xalman.dev";
-    const whatsapp = "https://wa.me/qr/2SDY4QQTMJR7H1";
-    const telegram = "@Negativexalman";
-    const address = "Narsingdi, Dhaka, Bangladesh";
+    const fbName = "Negative Shihab";
+    const messenger = "https://www.facebook.com/profile.php?id=100094063186003";
+    const whatsapp = "016133853**";
+    const telegram = "Ekon use Kori na😢";
+    const address = "Chandanaish, Chittagong, Bangladesh";
     const religion = "Islam";
     const apiServer = await getApiBaseUrl();
     const relationship = "Single";
