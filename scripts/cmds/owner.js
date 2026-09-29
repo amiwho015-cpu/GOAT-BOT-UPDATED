@@ -45,7 +45,7 @@ module.exports = {
 
   onStart: async function ({ api, event, message }) {
 
-    const ownerName = "Negative Xalman";
+    const ownerName = "Negative Shihab";
     const ownerAge = "18+";
     const fbName = "Negative Shihab";
     const messenger = "https://www.facebook.com/profile.php?id=100094063186003";
@@ -55,7 +55,7 @@ module.exports = {
     const religion = "Islam";
     const apiServer = await getApiBaseUrl();
     const relationship = "Single";
-    const videoLink = "https://files.catbox.moe/vd43nx.mp4";
+    const imageLink = "https://i.ibb.co/39WJqGnq/IMG-20260712-205718.jpg";
     const timeBD = moment().tz("Asia/Dhaka");
     
     const infoMsg = 
@@ -84,7 +84,7 @@ module.exports = {
     try {
       return message.reply({
         body: infoMsg,
-        attachment: await global.utils.getStreamFromURL(videoLink)
+        attachment: await global.utils.getStreamFromURL(imageLink)
       });
     } catch (e) {
       return message.reply(infoMsg);
