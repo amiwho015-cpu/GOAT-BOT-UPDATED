@@ -46,7 +46,7 @@ module.exports = {
   onStart: async function ({ api, event, message }) {
 
     const ownerName = "Negative Xalman";
-    const ownerAge = "18";
+    const ownerAge = "18+";
     const fbName = "Negative Shihab";
     const messenger = "https://www.facebook.com/profile.php?id=100094063186003";
     const whatsapp = "016133853**";
