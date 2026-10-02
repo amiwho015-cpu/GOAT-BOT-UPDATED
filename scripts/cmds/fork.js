@@ -1,8 +1,15 @@
+const axios = require("axios");
+
+const REPO_OWNER = "goatbotnx";
+const REPO_NAME = "GOAT-BOT-UPDATED";
+const REPO_LINK = `https://github.com/${REPO_OWNER}/${REPO_NAME}`;
+const REPO_API = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}`;
+
 module.exports = {
   config: {
     name: "fork",
-    version: "4.0",
-    author: "Shihab",
+    version: "4.5",
+    author: "CRX Shihab",
     countDown: 5,
     role: 0,
     shortDescription: "Show github repository link ",
@@ -14,24 +21,31 @@ module.exports = {
 
   langs: {
     en: {
-      current: `📌 𝐆𝐎𝐀𝐓-𝐁𝐎𝐓
-━━━━━━━━━━━━━━━━━━━━━━━━
-👑 𝐜𝐨𝐧𝐭𝐫𝐢𝐛𝐮𝐭𝐨𝐫 : NΞGΛTIVΞ XΛLMΛN
-🔗 𝐫𝐞𝐩𝐨𝐬𝐢𝐭𝐨𝐫𝐲      : %1
-💎 𝐬𝐭𝐚𝐭𝐮𝐬   : 𝐚𝐥𝐰𝐚𝐲𝐬 𝐮𝐩𝐝𝐚𝐭𝐢𝐧𝐠
-━━━━━━━━━━━━━━━━━━━━━━━━`
+      current: `🐐 𝗚𝗢𝗔𝗧-𝗕𝗢𝗧-𝗨𝗣𝗗𝗔𝗧𝗘𝗗\n━━━━━━━━━━━━━━━━━━━━\n⭐ ▰▰▰▰▰▰▰▱▱▱  %2 Stars\n🍴 ▰▰▰▰▰▰▰▰▰▱  %3 Forks\n━━━━━━━━━━━━━━━━━━━━\n🔗 %1\n👑 Maintained by CRX Shihab`
     }
   },
 
   onStart: async function ({ message, getLang }) {
-    const link = "https://github.com/goatbotnx/GOAT-BOT-UPDATED";
-    return message.reply(getLang("current", link));
+    const { stars, forks } = await getRepoStats();
+    return message.reply(getLang("current", REPO_LINK, stars, forks));
   },
 
   onChat: async function ({ message, getLang, event }) {
     if (event.body && event.body.toLowerCase() === "fork") {
-      const link = "https://github.com/goatbotnx/GOAT-BOT-UPDATED";
-      return message.reply(getLang("current", link));
+      const { stars, forks } = await getRepoStats();
+      return message.reply(getLang("current", REPO_LINK, stars, forks));
     }
   }
 };
+
+async function getRepoStats() {
+  try {
+    const { data } = await axios.get(REPO_API, { timeout: 10000 });
+    return {
+      stars: data.stargazers_count ?? "N/A",
+      forks: data.forks_count ?? "N/A"
+    };
+  } catch (error) {
+    return { stars: "N/A", forks: "N/A" };
+  }
+}

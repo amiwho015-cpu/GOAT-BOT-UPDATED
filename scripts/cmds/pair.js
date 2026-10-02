@@ -20,7 +20,7 @@ module.exports = {
   config: {
     name: "pair",
     version: "9.5",
-    author: "Shihab",
+    author: "CRX Shihab",
     role: 0,
     countDown: 5,
     shortDescription: "Romantic pair system with random background",

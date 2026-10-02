@@ -34,7 +34,7 @@ module.exports = {
     name: "emojimix",
     aliases: ["mix"],
     version: "1.0.0",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 5,
     role: 0,
     shortDescription: "Mix two emojis into one image",

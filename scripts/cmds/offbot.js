@@ -2,7 +2,7 @@ module.exports = {
 	config: {
 		name: "offbot",
 		version: "1.0",
-		author: "Shihab",
+		author: "CRX Shihab",
 		countDown: 45,
 		role: 2,
 		shortDescription: "Turn off bot",

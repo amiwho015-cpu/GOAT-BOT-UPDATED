@@ -8,7 +8,7 @@ module.exports = {
     name: "catbox",
     aliases: ["cb"],
     version: "3.5",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 5,
     role: 0,
     shortDescription: "Upload media to Catbox (supports multiple)",
@@ -68,7 +68,7 @@ module.exports = {
             const nxRes = await nx.post("https://catbox.moe/user/api.php", nxData, {
               headers: {
                 ...nxData.getHeaders(),
-                "User-Agent": "NX-Uploader/1.0 (Mozilla/5.0)"
+                "User-Agent": "CRX-Uploader/1.0 (Mozilla/5.0)"
               },
               timeout: 60000
             });
@@ -102,7 +102,7 @@ module.exports = {
       return api.sendMessage(nxLinks, nx210, nxId);
 
     } catch (err) {
-      console.error("NX Catbox Error:", err);
+      console.error("CRX Shihab Catbox Error:", err);
       api.setMessageReaction("❌", nxId, () => {}, true);
       return api.sendMessage("❌ Failed to upload media to Catbox.", nx210, nxId);
     }

@@ -7,7 +7,7 @@ module.exports = {
   config: {
     name: "hack",
     version: "2.5",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 5,
     role: 0,
     shortDescription: { en: "Generates a hacking image with profile picture" },

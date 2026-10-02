@@ -2,7 +2,7 @@ module.exports = {
   config: {
     name: "set",
     version: "4.0",
-    author: "Shihab",
+    author: "CRX Shihab",
     role: 0,
     shortDescription: { en: "Modify user money or exp" },
     longDescription: { en: "Update user economy data using UID, reply or mention" },

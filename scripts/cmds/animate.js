@@ -35,7 +35,7 @@ module.exports = {
   config: {
     name: "animate",
     version: "1.0",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 10,
     role: 0,
     shortDescription: "Animate an image using Wan-Video AI",

@@ -8,7 +8,7 @@ module.exports = {
     name: "trash",
     aliases: ["dustbin"],
     version: "1.0.1",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 5,
     role: 0,
     shortDescription: "কাউকে ডাস্টবিনে ফেলার ছবি",

@@ -34,7 +34,7 @@ module.exports = {
     name: "freeimage",
     aliases: ["freeimg", "imghost"],
     version: "1.0.0",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 5,
     role: 0,
     shortDescription: "Upload image to FreeImage via URL",

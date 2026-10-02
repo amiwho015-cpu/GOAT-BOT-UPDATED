@@ -4,7 +4,7 @@ module.exports = {
   config: {
     name: "pending",
     version: "2.4",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 5,
     role: 2,
     shortDescription: { en: "Manage pending group requests" },

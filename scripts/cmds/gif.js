@@ -34,7 +34,7 @@ module.exports = {
     name: "gif",
     aliases: ["animegif", "agif"],
     version: "3.0",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 5,
     role: 0,
     shortDescription: "Anime GIF",

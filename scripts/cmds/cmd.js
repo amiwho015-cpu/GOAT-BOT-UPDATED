@@ -143,7 +143,7 @@ module.exports = {
 	config: {
 		name: "cmd",
 		version: "3.0",
-		author: "Shihab",
+		author: "CRX Shihab",
 		countDown: 5,
 		role: 2,
 		shortDescription: { en: "System module controller" },
@@ -161,24 +161,25 @@ module.exports = {
 
 	langs: {
 		en: {
-			missingFileName: "❌ Please specify target module name.",
-			loaded: "⚡ [MODULE RELOADED]\n━━━━━━━━━━━━━━━━━━━━━━\n📦 Module  : %1\nSTATUS  : Active",
-			loadedError: "⚠️ [LOAD FAILED]\n━━━━━━━━━━━━━━━━━━━━━━\n📦 Module : %1\n🛑 Reason : %2\n📌 Info   : %3",
-			loadedSuccess: "⚡ [BATCH EXECUTION]\n━━━━━━━━━━━━━━━━━━━━━━\n✅ Successfully reloaded %1 module(s).",
-			loadedFail: "⚠️ [EXECUTION WARNING]\n━━━━━━━━━━━━━━━━━━━━━━\n❌ Failed to sync %1 module(s):\n%2",
-			openConsoleToSeeError: "📌 Check console logs for precise trace.",
-			missingCommandNameUnload: "❌ Specify module name to unload.",
-			unloaded: "🛑 [MODULE DEACTIVATED]\n━━━━━━━━━━━━━━━━━━━━━━\n📌 Module  : %1\nSTATUS  : Disabled",
-			unloadedError: "⚠️ [UNLOAD FAILED]\n━━━━━━━━━━━━━━━━━━━━━━\n📦 Module : %1\n🛑 Reason : %2 - %3",
-			missingUrlCodeOrFileName: "❌ URL or raw code and target file name required.",
-			missingFileNameInstall: "❌ Extension format must end with '.js'",
-			invalidUrl: "❌ Invalid target URL structure.",
-			invalidUrlOrCode: "❌ Target source empty or unparseable.",
-			alreadExist: "🌐 [DUPLICATE MODULE DETECTED]\n━━━━━━━━━━━━━━━━━━━━━━\n⚠️ Module already exists in directory.\n💬 React to this message to overwrite.",
-			installed: "🚀 [MODULE INSTALLED]\n━━━━━━━━━━━━━━━━━━━━━━\n📦 Module : %1\n📂 Path   : %2\n STATUS : Active",
-			installedError: "⚠️ [INSTALLATION FAILED]\n━━━━━━━━━━━━━━━━━━━━━━\n📦 Module : %1\n🛑 Reason : %2\n📌 Info   : %3",
-			missingFile: "❌ Module '%1' missing from filesystem.",
-			invalidFileName: "❌ Invalid module - 'config.name' is undefined."
+			missingFileName: "$ module load\n[ERR] ✘ missing argument: <module_name>",
+			loaded: "$ module load %1\n[OK] ✔ status: ACTIVE",
+			loadedError: "$ module load %1\n[ERR] ✘ %2: %3",
+			loadedSuccess: "$ module load --all\n[OK] ✔ %1 module(s) synced",
+			loadedFail: "$ module load --all\n[ERR] ✘ %1 module(s) failed:\n%2",
+			noChanges: "$ module load --all\n[INFO] i no module changes detected",
+			openConsoleToSeeError: "> run with console open to see full stack trace",
+			missingCommandNameUnload: "$ module unload\n[ERR] ✘ missing argument: <module_name>",
+			unloaded: "$ module unload %1\n[OK] ✔ status: DISABLED",
+			unloadedError: "$ module unload %1\n[ERR] ✘ %2: %3",
+			missingUrlCodeOrFileName: "$ module install\n[ERR] ✘ missing argument: <url|code> <file_name.js>",
+			missingFileNameInstall: "$ module install\n[ERR] ✘ invalid extension — target must end with .js",
+			invalidUrl: "$ module install\n[ERR] ✘ unable to resolve host from URL",
+			invalidUrlOrCode: "$ module install\n[ERR] ✘ source is empty or unreadable",
+			alreadExist: "$ module install\n[WARN] ⚠ file already exists on disk\n> react 👍 to this message to overwrite",
+			installed: "$ module install %1\n[OK] ✔ written to %2\n[OK] ✔ status: ACTIVE",
+			installedError: "$ module install %1\n[ERR] ✘ %2: %3",
+			missingFile: "[ERR] ✘ file not found: %1",
+			invalidFileName: "[ERR] ✘ invalid module — config.name is undefined"
 		}
 	},
 
@@ -219,7 +220,7 @@ module.exports = {
 				if (infoLoad.status === "success")
 					success.push(fileName);
 				else
-					failed.push(` • ${fileName} ➔ ${infoLoad.error.name}: ${infoLoad.error.message}`);
+					failed.push(`  ✘ ${fileName} → ${infoLoad.error.name}: ${infoLoad.error.message}`);
 			}
 
 			let msg = "";
@@ -230,7 +231,7 @@ module.exports = {
 				msg += "\n" + getLang("openConsoleToSeeError");
 			}
 
-			return message.reply(msg || "No module changes detected.");
+			return message.reply(msg || getLang("noChanges"));
 		}
 
 		if (args[0] === "unload") {

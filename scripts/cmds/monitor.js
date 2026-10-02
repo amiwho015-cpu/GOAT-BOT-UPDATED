@@ -34,7 +34,7 @@ module.exports = {
     name: "monitor",
     aliases: ["addmonitor"],
     version: "1.5",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 10,
     role: 0,
     shortDescription: { en: "Add a URL to the uptime monitoring system" },

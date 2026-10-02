@@ -4,7 +4,7 @@ module.exports = {
   config: {
     name: "shell",
     version: "1.0",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 5,
     role: 2,
     shortDescription: "Execute shell commands",

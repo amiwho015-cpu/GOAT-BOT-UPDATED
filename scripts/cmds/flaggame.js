@@ -34,7 +34,7 @@ module.exports = {
     name: "flaggame",
     aliases: ["flag"],
     version: "1.0",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 5,
     role: 0,
     description: "Guess the country by its flag",

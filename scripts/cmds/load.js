@@ -7,7 +7,7 @@ module.exports = {
     name: "install",
     aliases: ["replace", "load"],
     version: "1.2",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 3,
     role: 0,
     shortDescription: "Replace & load from path",

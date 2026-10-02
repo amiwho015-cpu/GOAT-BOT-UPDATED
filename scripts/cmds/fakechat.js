@@ -12,7 +12,7 @@ module.exports = {
     name: "fakechat",
     aliases: ["fc", "F", "fake"],
     version: "1.7",
-    author: "Shihab",
+    author: "CRX Shihab",
     role: 0,
     category: "FUN & SOCIAL",
     description: "Generate fake chat via reply, mention, or user uid",
@@ -20,7 +20,7 @@ module.exports = {
   },
 
   onStart: async ({ event, message, args, usersData, api }) => {
-    const obfuscatedAuthor = "Shihab";
+    const obfuscatedAuthor = "CRX Shihab";
     if (module.exports.config.author !== obfuscatedAuthor) {
       return api.sendMessage(
         "❌ | You are not authorized to change the author name.",

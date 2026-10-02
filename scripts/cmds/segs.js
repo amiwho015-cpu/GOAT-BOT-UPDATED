@@ -36,7 +36,7 @@ module.exports = {
     name: "segs",
     aliases: ["xnxx"],
     version: "5.0",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 5,
     role: 2,
     shortDescription: "Search and download videos",

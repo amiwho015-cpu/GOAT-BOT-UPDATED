@@ -33,7 +33,7 @@ module.exports = {
     config: {
         name: "waifu",
         version: "3.0",
-        author: "Shihab",
+        author: "CRX Shihab",
         countDown: 5,
         role: 0,
         shortDescription: "Get random anime waifu images",

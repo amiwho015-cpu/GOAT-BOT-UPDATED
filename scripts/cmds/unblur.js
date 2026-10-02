@@ -33,7 +33,7 @@ module.exports = {
   config: {
     name: "unblur",
     version: "2.3",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 5,
     role: 0,
     shortDescription: "unblur any image",

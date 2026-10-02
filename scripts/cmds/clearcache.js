@@ -6,7 +6,7 @@ module.exports = {
     name: "clearcache",
     aliases: ["ccache", "clear"],
     version: "1.1",
-    author: "Shihab",
+    author: "CRX Shihab",
     role: 2,
     countDown: 5,
     shortDescription: { en: "Clear cache folder" },

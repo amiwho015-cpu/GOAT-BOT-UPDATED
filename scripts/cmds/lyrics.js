@@ -34,7 +34,7 @@ module.exports = {
     name: "lyrics",
     aliases: ["songlyrics"],
     version: "2.0",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 5,
     role: 0,
     shortDescription: "Get song lyrics",

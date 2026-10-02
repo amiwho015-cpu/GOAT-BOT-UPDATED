@@ -7,7 +7,7 @@ module.exports = {
   config: {
     name: "pair2",
     version: "3.0",
-    author: "Shihab",
+    author: "CRX Shihab",
     role: 0,
     countDown: 5,
     shortDescription: "Cute romantic pair system",

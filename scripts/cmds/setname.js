@@ -16,7 +16,7 @@ module.exports = {
   config: {
     name: "setname",
     version: "2.0",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 5,
     role: 0,
     description: "Change nickname of all members in chat or members tagged by a format",

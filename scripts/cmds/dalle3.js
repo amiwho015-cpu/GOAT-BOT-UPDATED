@@ -36,7 +36,7 @@ module.exports = {
     name: "dalle",
     aliases: ["dalle3", "dall-e"],
     version: "1.4",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 5,
     role: 0,
     shortDescription: "Generate image using DALL-E 3",

@@ -6,7 +6,7 @@ module.exports = {
   config: {
     name: "nokia",
     version: "3.2",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 5,
     role: 0,
     category: "FUN & SOCIAL",

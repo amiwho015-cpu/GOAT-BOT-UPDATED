@@ -36,7 +36,7 @@ module.exports = {
     name: "say2",
     aliases: ["tts2"],
     version: "1.1",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 5,
     role: 0,
     shortDescription: { en: "Text to Speech using Edge TTS" },

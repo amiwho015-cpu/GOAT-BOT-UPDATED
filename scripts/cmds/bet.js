@@ -2,7 +2,7 @@ module.exports = {
   config: {
     name: "bet",
     version: "11.0",
-    author: "Shihab", // cmd main author tanil full system modified by xalman 
+    author: "CRX Shihab",
     shortDescription: { en: "Random multiplier bet game with hourly limit" },
     longDescription: { en: "Place a bet and win. 50% win rate and 50 plays per hour limit." },
     category: "GAMES",

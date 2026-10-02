@@ -7,7 +7,7 @@ module.exports = {
   config: {
     name: "jail",
     version: "1.0.0",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 5,
     role: 0,
     shortDescription: "jail picture",

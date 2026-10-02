@@ -34,7 +34,7 @@ module.exports = {
     name: "prompt",
     aliases: ["imgprompt", "p"],
     version: "4.0",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 5,
     role: 0,
     shortDescription: "Generate prompt from image",

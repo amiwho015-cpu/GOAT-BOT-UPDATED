@@ -15,7 +15,7 @@ module.exports = {
     name: "kidnap",
     aliases: ["kdnp"],
     version: "3.3",
-    author: "Shihab",
+    author: "CRX Shihab",
     role: 0,
     countDown: 5,
     shortDescription: "Make a kidnap-style image",

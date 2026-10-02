@@ -35,7 +35,7 @@ module.exports = {
   config: {
     name: "emojigif",
     version: "1.0",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 5,
     role: 0,
     shortDescription: {

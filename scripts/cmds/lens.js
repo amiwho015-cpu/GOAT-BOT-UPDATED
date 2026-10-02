@@ -34,7 +34,7 @@ module.exports = {
     name: "lens",
     aliases: ["ocr"],
     version: "1.0",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 5,
     role: 0,
     shortDescription: "Extract text from images (Google Lens)",

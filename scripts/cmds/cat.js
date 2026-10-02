@@ -34,7 +34,7 @@ module.exports = {
         name: "cat",
         aliases: ["catimg"],
         version: "1.2.0",
-        author: "Shihab",
+        author: "CRX Shihab",
         countDown: 5,
         role: 0,
         shortDescription: "Get random cat images or check list count",

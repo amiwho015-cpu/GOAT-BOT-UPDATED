@@ -33,7 +33,7 @@ module.exports = {
   config: {
     name: "npm",
     version: "1.5",
-    author: "Shihab",
+    author: "CRX Shihab",
     role: 0,
     countDown: 5,
     shortDescription: { en: "Search npm packages with pagination" },

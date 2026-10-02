@@ -46,7 +46,7 @@ module.exports = {
   config: {
     name: "up",
     version: "4.0",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 5,
     role: 0,
     description: "See bot uptime and most used commands in a large neon System Overview HUD",
@@ -93,7 +93,7 @@ module.exports = {
 🖥 Platform: ${platform}
 💾 Memory  : ${usedMemStr} / ${totalMemStr}
 ✧━━━━━━━━━━━━━━━━━━━━✧
-⚡ Powered by NX`;
+⚡ Powered by CRX Shihab`;
 
     try {
       const cachePath = path.join(__dirname, 'cache', `up_hud.png`);

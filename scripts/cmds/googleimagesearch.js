@@ -37,7 +37,7 @@ module.exports = {
     name: "googleimagesearch",
     aliases: ["ggimg", "googleimg"],
     version: "4.0",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 15,
     role: 0,
     shortDescription: "Premium 21-Image Canvas Grid",

@@ -6,7 +6,7 @@ config: {
     name: "boxinfo",
     aliases: ['boxinfo'],
     version: "1.0",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 5,
     role: 0,
     shortDescription: "See Box info",

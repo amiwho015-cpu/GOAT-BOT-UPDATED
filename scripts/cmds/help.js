@@ -3,7 +3,7 @@ const axios = require("axios");
 const path = require("path");
 const { getPrefix } = global.utils;
 const { commands, aliases } = global.GoatBot;
-const doNotDelete = "〲 𝗠𝗔𝗬𝗕𝗘 𝗡𝗫 〲";
+const doNotDelete = "〲 𝗖𝗥𝗫 𝗦𝗛𝗜𝗛𝗔𝗕 〲";
 
 function getDescription(config, langCode) {
     let desc = config.shortDescription || config.description || config.longDescription;
@@ -43,7 +43,7 @@ module.exports = {
     config: {
         name: "help",
         version: "2.0",
-        author: "Shihab",
+        author: "CRX Shihab",
         countDown: 5,
         role: 0,
         shortDescription: { en: "View command usage" },

@@ -44,10 +44,10 @@ module.exports = {
     name: "imagefilter",
     aliases: ["filter", "imgfilter"],
     version: "2.0",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 3,
     role: 0,
-    shortDescription: "get 27 Image filter by xalman",
+    shortDescription: "get 27 Image filter by CRX Shihab",
     category: "image"
   },
 

@@ -33,7 +33,7 @@ module.exports = {
   config: {
     name: "caption",
     version: "1.5",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 2,
     role: 0,
     shortDescription: "Get random captions",

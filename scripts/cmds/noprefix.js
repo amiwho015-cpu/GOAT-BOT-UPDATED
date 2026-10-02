@@ -5,7 +5,7 @@ module.exports = {
     name: "noprefix",
     aliases: ["adminnoprefix", "npx"],
     version: "1.5",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 5,
     role: 2,
     shortDescription: { en: "Toggle admin no-prefix mode" },

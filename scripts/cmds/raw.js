@@ -36,7 +36,7 @@ module.exports = {
     name: "raw",
     aliases: ["bin"],
     version: "2.0",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 5,
     role: 2,
     shortDescription: "Upload file or text to Pastebin and get raw link",

@@ -4,7 +4,7 @@ module.exports = {
     version: "3.0",
     category: "box chat",
     role: 0,
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 3,
     description: {
       en: "Real mention users"

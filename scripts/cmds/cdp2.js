@@ -36,7 +36,7 @@ module.exports = {
     name: "coupledp2",
     aliases: ["cdp2", "k-pop"],
     version: "2.1",
-    author: "Shihab",
+    author: "CRX Shihab",
     description: "Random K-Pop Matching Couple DP",
     category: "LOVE",
     cooldown: 5,

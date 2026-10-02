@@ -34,7 +34,7 @@ module.exports = {
     name: "rbg",
     aliases: ["removebg"],
     version: "3.1",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 4,
     role: 0,
     shortDescription: "Remove image background",

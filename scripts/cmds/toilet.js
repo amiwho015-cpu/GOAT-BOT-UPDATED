@@ -6,7 +6,7 @@ module.exports = {
   config: {
     name: "toilet",
     version: "3.3",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 5,
     role: 0,
     category: "FUN & SOCIAL",

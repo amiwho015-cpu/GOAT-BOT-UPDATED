@@ -3,7 +3,7 @@ module.exports = {
     name: "mathgame",
     aliases: ["math"],
     version: "6.0",
-    author: "Shihab",
+    author: "CRX Shihab",
     role: 0,
     category: "GAMES"
   },

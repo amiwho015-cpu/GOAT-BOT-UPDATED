@@ -35,7 +35,7 @@ module.exports = {
     config: {
         name: "text2image",
         version: "1.3.0",
-        author: "Shihab",
+        author: "CRX Shihab",
         countDown: 10,
         role: 0,
         shortDescription: "Generate Premium AI Images",
@@ -77,7 +77,7 @@ module.exports = {
 
             api.setMessageReaction("✅", messageID, (err) => {}, true);
 
-            const msgBody = `❖ 𝖳𝖤𝖷𝖳 𝖳𝖮 𝖨𝖬𝖠𝖦𝖤 ❖\n━━━━━━━━━━━━━━━━━━\n✎ 𝖯𝗋𝗈𝗆𝗉𝗍: ${prompt}\n⏱️ 𝖲𝗉𝖾𝖾𝖽: ${timeTaken}𝗌\n━━━━━━━━━━━━━━━━━━\n𝖡𝗒 𝗑𝖺𝗅𝗆𝖺𝗇`;
+            const msgBody = `❖ 𝖳𝖤𝖷𝖳 𝖳𝖮 𝖨𝖬𝖠𝖦𝖤 ❖\n━━━━━━━━━━━━━━━━━━\n✎ 𝖯𝗋𝗈𝗆𝗉𝗍: ${prompt}\n⏱️ 𝖲𝗉𝖾𝖾𝖽: ${timeTaken}𝗌\n━━━━━━━━━━━━━━━━━━\n𝗕𝘆 𝗖𝗥𝗫 𝗦𝗵𝗶𝗵𝗮𝗯`;
 
             return api.sendMessage({
                 body: msgBody,

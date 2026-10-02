@@ -16,7 +16,7 @@ module.exports = {
     name: "premium",
     aliases: ["premiumbuy", "prebuy"],
     version: "4.0",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 5,
     role: 0,
     shortDescription: { en: "Buy and check premium membership status" },

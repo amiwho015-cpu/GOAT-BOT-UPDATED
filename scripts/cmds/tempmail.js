@@ -34,7 +34,7 @@ module.exports = {
     name: "tempmail",
     aliases: ["tm"],
     version: "6.5",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 5,
     role: 0,
     shortDescription: "Temp-Mail (Free)",

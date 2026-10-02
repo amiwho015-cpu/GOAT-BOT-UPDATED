@@ -3,7 +3,7 @@ module.exports = {
     name: "hunt",
     aliases: ["treasure"],
     version: "2.0",
-    author: "Shihab",
+    author: "CRX Shihab",
     role: 0,
     countDown: 5,
     shortDescription: "Treasure Chest Hunting Game",

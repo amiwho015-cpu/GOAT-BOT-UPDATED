@@ -34,11 +34,11 @@ module.exports = {
     name: "nanobanana",
     aliases: ["nb"],
     version: "1.2",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 10,
     role: 0,
     shortDescription: "Generate images using Nano Banana AI",
-    longDescription: "Generate high-quality images from text prompts using Xalman's Nano Banana API",
+    longDescription: "Generate high-quality images from text prompts using CRX Shihab's Nano Banana API",
     category: "AI",
     guide: "{pn} <prompt>"
   },

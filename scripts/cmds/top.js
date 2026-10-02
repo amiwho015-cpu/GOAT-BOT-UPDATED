@@ -9,7 +9,7 @@ module.exports = {
   config: {
     name: "top",
     version: "7.1",
-    author: "Shihab",
+    author: "CRX Shihab",
     role: 0,
     shortDescription: {
       en: "Top Balance Leaderboard"
@@ -1240,7 +1240,7 @@ function drawFooter(
     "rgba(255,255,255,0.45)";
 
   ctx.fillText(
-    "MADE BY XALMAN  •  BIGGER BALANCE, BIGGER DREAMS",
+    "MADE BY CRX SHIHAB  •  BIGGER BALANCE, BIGGER DREAMS",
     width / 2,
     height - 43
   );

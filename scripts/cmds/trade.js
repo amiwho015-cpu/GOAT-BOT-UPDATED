@@ -3,7 +3,7 @@ module.exports = {
     name: "trade",
     aliases: ["quotex", "qx"],
     version: "3.6",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 5,
     role: 0,
     shortDescription: "Binary Options Trading Game",

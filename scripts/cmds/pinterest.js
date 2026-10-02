@@ -37,7 +37,7 @@ module.exports = {
     name: "pinterest",
     aliases: ["pin", "pinimg"],
     version: "3.0",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 5,
     role: 0,
     shortDescription: { en: "Pinterest Search with High-Res Real UI" },

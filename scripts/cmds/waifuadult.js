@@ -33,9 +33,9 @@ module.exports = {
   config: {
     name: "waifuadult",
     version: "2.0",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 3,
-    role: 2,
+    role: 0,
     shortDescription: "Get anime nsfw image",
     longDescription: "Fetch direct image from API and automatic unsent after 10 second",
     category: "NSFW",

@@ -36,7 +36,7 @@ module.exports = {
     name: "ytb",
     aliases: ["youtube"],
     version: "10.0",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 5,
     role: 0,
     shortDescription: "YouTube Audio/Video Downloader with fast stream response",

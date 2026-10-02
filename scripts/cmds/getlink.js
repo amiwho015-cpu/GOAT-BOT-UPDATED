@@ -4,7 +4,7 @@ module.exports = {
   config: {
     name: "getlink",
     version: "1.5",
-    author: "Shihab",
+    author: "CRX Shihab",
     role: 0,
     countDown: 5,
     shortDescription: "Get direct link of replied media (image/video/voice)",

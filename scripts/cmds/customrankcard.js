@@ -8,7 +8,7 @@ module.exports = {
 		name: "customrankcard",
 		aliases: ["crc", "customrank"],
 		version: "1.12",
-		author: "Shihab",
+		author: "CRX Shihab",
 		countDown: 5,
 		role: 0,
 		description: {

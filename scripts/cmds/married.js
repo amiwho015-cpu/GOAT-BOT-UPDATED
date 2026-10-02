@@ -7,7 +7,7 @@ module.exports = {
     name: "marry",
     aliases: ["married", "biya", "engage"], 
     version: "3.7",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 5,
     role: 0,
     shortDescription: "Propose with custom image",

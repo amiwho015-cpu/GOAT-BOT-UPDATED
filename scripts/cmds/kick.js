@@ -3,7 +3,7 @@ module.exports = {
     name: "kick",
     aliases: ["kik"],
     version: "2.3",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 5,
     role: 1,
     shortDescription: "Kick members from group",

@@ -14,7 +14,7 @@ module.exports = {
   config: {
     name: "autoreact",
     version: "2.3",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 5,
     role: 1,
     shortDescription: { en: "Auto react to messages in group" },

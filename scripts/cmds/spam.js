@@ -1,7 +1,7 @@
 module.exports = {
   config: {
     name: "spam",
-    author: "Shihab", //kim/zed
+    author: "CRX Shihab",
     role: 2,
     shortDescription: "Repeat text sender",
     longDescription: "Sends a selected message multiple times with a controlled interval.",

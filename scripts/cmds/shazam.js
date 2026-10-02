@@ -36,7 +36,7 @@ module.exports = {
     name: "shazam",
     aliases: ["songid"],
     version: "1.0",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 5,
     role: 0,
     shortDescription: { en: "Identify song from audio/video" },

@@ -3,7 +3,7 @@ module.exports = {
     name: "postreact",
     aliases: ["react"],
     version: "2.0",
-    author: "Shihab",
+    author: "CRX Shihab",
     role: 0,
     shortDescription: "React to a Facebook post via ID",
     longDescription: "Give any reaction (LIKE, LOVE, WOW, HAHA, SAD, ANGRY) to a Facebook post using its ID.",

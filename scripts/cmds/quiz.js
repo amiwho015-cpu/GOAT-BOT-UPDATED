@@ -57,7 +57,7 @@ module.exports = {
     name: "quiz",
     aliases: ["qz"],
     version: "8.0",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 5,
     role: 0,
     description: "Play a random quiz with elegant design and automatic clean-up",

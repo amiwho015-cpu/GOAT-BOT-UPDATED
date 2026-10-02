@@ -2,7 +2,7 @@ module.exports = {
 	config: {
 		name: "mention",
 		version: "1.2",
-		author: "Shihab",
+		author: "CRX Shihab",
 		role: 0,
 		shortDescription: {
 			en: "Reply when specific user is mentioned"

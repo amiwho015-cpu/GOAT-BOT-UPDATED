@@ -34,7 +34,7 @@ module.exports = {
         name: "bluearchive",
         aliases: ["ba"],
         version: "1.2",
-        author: "Shihab",
+        author: "CRX Shihab",
         countDown: 5,
         role: 0,
         shortDescription: "Get random Blue Archive images or check list",

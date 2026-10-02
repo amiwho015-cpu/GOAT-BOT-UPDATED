@@ -34,7 +34,7 @@ module.exports = {
   config: {
     name: "song",
     version: "4.0",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 2,
     role: 0,
     shortDescription: {

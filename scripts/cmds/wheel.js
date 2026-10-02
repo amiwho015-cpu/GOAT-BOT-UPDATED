@@ -14,7 +14,7 @@ module.exports = {
   config: {
     name: "wheel",
     version: "4.0",
-    author: "Shihab",
+    author: "CRX Shihab",
     role: 0,
     countDown: 5,
     category: "GAMES",

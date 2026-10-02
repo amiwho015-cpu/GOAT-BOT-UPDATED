@@ -3,7 +3,7 @@ module.exports = {
     name: "approve",
     aliases: ["aprv"],
     version: "3.0",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 5,
     role: 1,
     shortDescription: { en: "Approve pending members" },

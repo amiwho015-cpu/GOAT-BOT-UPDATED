@@ -34,7 +34,7 @@ module.exports = {
     name: "translate",
     aliases: ["trans", "tr"],
     version: "2.0",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 5,
     role: 0,
     shortDescription: "Translate text with language info",

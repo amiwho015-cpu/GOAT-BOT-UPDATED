@@ -34,7 +34,7 @@ module.exports = {
     name: "tinyurl",
     aliases: ["tiny"],
     version: "1.0",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 5,
     role: 0,
     shortDescription: "Shorten a long URL",

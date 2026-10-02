@@ -5,7 +5,7 @@ module.exports = {
     name: "developer",
     aliases: ["dev"],
     version: "2.1",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 3,
     role: 0,
     category: "owner",

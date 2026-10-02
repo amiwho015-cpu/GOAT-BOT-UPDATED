@@ -4,7 +4,7 @@ module.exports = {
   config: {
     name: "autosticker",
     version: "5.4",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 5,
     role: 0,
     description: "Send a random sticker with cooldown. Reply-stickers are ignored.",

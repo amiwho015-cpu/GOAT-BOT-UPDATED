@@ -6,7 +6,7 @@ module.exports = {
     name: "notification",
     aliases: ["notify", "noti"],
     version: "4.1",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 100,
     role: 2,
     shortDescription: { en: "Premium notification sender" },
@@ -42,7 +42,7 @@ module.exports = {
       }
     }
 
-    const owner = "xalman";
+    const owner = "CRX Shihab";
     const bodyText = `╭━━━━━━━━━━━━━━━━━━━━━━╮
 ┃    📢 𝗡𝗢𝗧𝗜𝗙𝗜𝗖𝗔𝗧𝗜𝗢𝗡                      
 ╰━━━━━━━━━━━━━━━━━━━━━━╯

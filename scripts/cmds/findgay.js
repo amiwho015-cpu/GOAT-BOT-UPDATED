@@ -7,7 +7,7 @@ module.exports = {
   config: {
     name: "findgay",
     version: "2.0",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 10,
     role: 0,
     shortDescription: { en: "Finds the gayest person" },

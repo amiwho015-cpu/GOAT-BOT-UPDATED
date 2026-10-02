@@ -6,7 +6,7 @@ module.exports = {
     name: "setcover",
     aliases: ["changecover", "cover"],
     version: "1.0",
-    author: "Shihab",
+    author: "CRX Shihab",
     role: 2,
     countDown: 10,
     shortDescription: "Change bot's cover photo",

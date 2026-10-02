@@ -8,7 +8,7 @@ module.exports = {
         name: "dog",
         aliases: ["kutta"],
         version: "2.0",
-        author: "Shihab",
+        author: "CRX Shihab",
         countDown: 5,
         role: 0,
         shortDescription: "Shows two users on a custom background",

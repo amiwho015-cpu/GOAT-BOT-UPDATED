@@ -14,7 +14,7 @@ module.exports = {
     name: "poke",
     aliases: ["chud"],
     version: "5.0",
-    author: "Shihab",
+    author: "CRX Shihab",
     role: 0,
     countDown: 10,
     shortDescription: "poke image",

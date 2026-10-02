@@ -203,7 +203,7 @@ module.exports = {
   config: {
     name: "autodl",
     version: "22.0",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 1,
     role: 0,
     shortDescription: "Multi-Platform Media Downloader up to 22+",
@@ -627,7 +627,7 @@ module.exports = {
 🔻 SIZE — ${formatSize(stats.size)}
 🔻 TIME — ${elapsed}s
 ────────────────────
-⚙️ POWERED BY Shihab`;
+⚙️ POWERED BY CRX SHIHAB`;
 
       await message.reply({
         body: caption,

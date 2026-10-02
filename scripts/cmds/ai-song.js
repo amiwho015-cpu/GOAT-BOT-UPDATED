@@ -38,7 +38,7 @@ module.exports = {
     name: "ai-song",
     aliases: ["aisong", "aimusic"],
     version: "4.1",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 20,
     role: 0,
     shortDescription: "Generate AI songs",
@@ -58,7 +58,7 @@ module.exports = {
 
 ⏱️ 𝗗𝘂𝗿𝗮𝘁𝗶𝗼𝗻: 6 – 120s (Default: 120)
 
-╰━━━〔 ⚡ Powered by NX AI 〕━━━╯
+╰━━━〔 ⚡ Powered by CRX Shihab 〕━━━╯
 `
     }
   },

@@ -36,7 +36,7 @@ module.exports = {
     name: "v2a",
     aliases: ["video2audio"],
     version: "3.0",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 5,
     role: 0,
     shortDescription: "Video to audio",

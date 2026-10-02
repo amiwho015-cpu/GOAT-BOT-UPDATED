@@ -2,7 +2,7 @@ module.exports = {
   config: {
     name: "supportgc",
     version: "3.0",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 8,
     role: 0,
     shortDescription: { en: "Join official support chat" },

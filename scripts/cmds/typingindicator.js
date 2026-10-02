@@ -5,7 +5,7 @@ module.exports = {
     name: "typingindicator",
     aliases: ["typing", "typingtoggle"],
     version: "1.0",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 5,
     role: 2,
     shortDescription: { en: "Toggle the global typing indicator" },

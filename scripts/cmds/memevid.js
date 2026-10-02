@@ -36,7 +36,7 @@ module.exports = {
     name: "memevid",
     aliases: ["memevideo"],
     version: "3.0",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 5,
     role: 0,
     description: "Get a random meme video with auto-retry",

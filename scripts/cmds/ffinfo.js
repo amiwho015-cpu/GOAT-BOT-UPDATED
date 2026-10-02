@@ -34,7 +34,7 @@ module.exports = {
     name: "ffinfo",
     aliases: ["freefireinfo"],
     version: "1.5",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 5,
     role: 0,
     shortDescription: { en: "Detailed Free Fire player profile info" },
@@ -108,7 +108,7 @@ module.exports = {
         }
 
         msg += `╰─────────────────────\n`;
-        msg += `✨ Operator: ${operator || "xalman"}`;
+        msg += `✨ Operator: ${operator || "CRX Shihab"}`;
 
         return message.reply(msg);
       } else {

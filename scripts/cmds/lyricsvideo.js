@@ -36,7 +36,7 @@ module.exports = {
     name: "lyricsvideo",
     aliases: ["lyricsvid", "lvid"],
     version: "1.0",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 5,
     role: 0,
     shortDescription: { en: "Get a lyrics video from TikTok" },

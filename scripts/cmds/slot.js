@@ -2,7 +2,7 @@ module.exports = {
   config: {
     name: "slot",
     version: "8.0",
-    author: "Shihab",
+    author: "CRX Shihab",
     role: 0,
     countDown: 5,
     category: "GAMES",

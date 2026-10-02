@@ -36,7 +36,7 @@ module.exports = {
     name: "spotify",
     aliases: ["sing2", "s2"],
     version: "2.1",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 5,
     role: 0,
     shortDescription: { en: "Search and download Spotify songs" },

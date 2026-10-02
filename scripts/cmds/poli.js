@@ -35,7 +35,7 @@ module.exports = {
   config: {
     name: "poli",
     version: "1.2",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 5,
     role: 0,
     shortDescription: "Generate AI image",

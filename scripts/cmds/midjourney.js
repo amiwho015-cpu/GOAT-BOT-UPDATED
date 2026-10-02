@@ -47,7 +47,7 @@ module.exports = {
     name: "midjourney",
     aliases: ["mj"],
     version: "4.0",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 10,
     role: 0,
     shortDescription: "Generate 4 Midjourney AI images with grid preview",

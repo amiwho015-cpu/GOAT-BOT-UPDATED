@@ -33,7 +33,7 @@ module.exports = {
   config: {
     name: "ss",
     version: "3.0",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 5,
     role: 0,
     description: "Capture website screenshot (PC or mobile mode)",

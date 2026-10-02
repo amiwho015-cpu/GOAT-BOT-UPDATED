@@ -36,7 +36,7 @@ module.exports = {
     name: "edit",
     aliases: ["imageedit", "ai-edit"],
     version: "4.1",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 10,
     role: 0,
     shortDescription: "AI Image Editor",

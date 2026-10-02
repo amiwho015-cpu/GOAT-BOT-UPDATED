@@ -55,7 +55,7 @@ module.exports = {
     name: "ai",
     aliases: ["deepai"],
     version: "2.0",
-    author: "Shihab",
+    author: "CRX Shihab",
     countDown: 3,
     role: 0,
     shortDescription: { en: "Chat with DeepAI" },

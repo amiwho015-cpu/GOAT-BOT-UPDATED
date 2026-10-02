@@ -33,7 +33,7 @@ module.exports = {
   config: {
     name: "github",
     version: "1.0",
-    author: "Shihab",
+    author: "CRX Shihab",
     role: 0,
     countDown: 5,
     shortDescription: { en: "Fetch GitHub user profile and top repositories" },
@@ -44,7 +44,7 @@ module.exports = {
   onStart: async function ({ api, event, args, message }) {
     const username = args[0];
     if (!username) {
-      return message.reply("❌ Please provide a GitHub username.\nExample: /github goatbotnx");
+      return message.reply("❌ Please provide a GitHub username.\nExample: /github <username>");
     }
 
     try {
